@@ -1,0 +1,9 @@
+Flask
+Flask-SQLAlchemy
+Flask-Cors
+PyMySQL
+bcrypt
+python-dateutil
+SQLAlchemy
+Werkzeug
+cryptography
