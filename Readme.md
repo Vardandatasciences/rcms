@@ -1,4 +1,4 @@
-# AWE Project
+# RCMS Project
 
 This project consists of a React frontend and a Flask backend.
 
@@ -21,9 +21,25 @@ This project consists of a React frontend and a Flask backend.
    cd backend
    ```
 
-2 and 3 :
-Dont create venv 
-     ```
+2. Create environment 
+
+ ```
+ python -m venv venv 
+ ```
+
+
+3. Activate the virtual environment:
+- **Windows**:
+  ```
+  venv\Scripts\activate
+  ```
+- **Mac/Linux**:
+  ```
+  source venv/bin/activate
+  ```
+
+
+
 
 4. Install dependencies:
    ```
