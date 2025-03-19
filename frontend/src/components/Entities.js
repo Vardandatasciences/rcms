@@ -6,9 +6,11 @@ import "./Entities.css"; // Import CSS for styling
 import AddEntity from "./AddEntity"; // Import AddEntity component
 import EditEntity from "./EditEntity"; // Import EditEntity component
 import DeleteEntity from "./DeleteEntity"; // Import DeleteEntity component
+import { FaSearch, FaFilter } from "react-icons/fa"; // Import icons
 
 const Entities = () => {
   const [entities, setEntities] = useState([]);
+  const [filteredEntities, setFilteredEntities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -22,15 +24,29 @@ const Entities = () => {
     contact_phno: "",
     alternate_contact: "",
     description: "",
-    country: "",
+    country: "India",
     contact_name: "",
     alternate_contact_name: "",
     state: "",
     pincode: "",
     admin_email: "",
-    admin_password: ""
+    admin_password: "",
+    selected_regulations: []
   });
+  const [regulations, setRegulations] = useState([]);
+  const [countries, setCountries] = useState([]);
+  const [loadingRegulations, setLoadingRegulations] = useState(false);
+  const [contactCountryCode, setContactCountryCode] = useState("+91");
+  const [alternateContactCountryCode, setAlternateContactCountryCode] = useState("+91");
   const navigate = useNavigate();
+  
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    country: "",
+    state: ""
+  });
 
   useEffect(() => {
     // Check if user is logged in
@@ -43,16 +59,89 @@ const Entities = () => {
     fetchEntities();
   }, [navigate]);
 
+  useEffect(() => {
+    if (showAddForm) {
+      fetchRegulations();
+      fetchCountryCodes();
+    }
+  }, [showAddForm]);
+
   const fetchEntities = async () => {
     try {
       setLoading(true);
       const response = await axios.get("http://localhost:5000/entities");
-      setEntities(response.data.entities || []);
+      const entitiesData = response.data.entities || [];
+      setEntities(entitiesData);
+      setFilteredEntities(entitiesData);
       setLoading(false);
     } catch (err) {
       console.error("Error fetching entities:", err);
       setError("Failed to fetch entities. Please try again later.");
       setLoading(false);
+    }
+  };
+
+  // Apply search and filters
+  useEffect(() => {
+    let result = entities;
+    
+    // Apply search term
+    if (searchTerm) {
+      const lowercasedSearch = searchTerm.toLowerCase();
+      result = result.filter(
+        entity => 
+          entity.entity_id.toLowerCase().includes(lowercasedSearch) ||
+          entity.entity_name.toLowerCase().includes(lowercasedSearch) ||
+          entity.location.toLowerCase().includes(lowercasedSearch) ||
+          entity.contact_name.toLowerCase().includes(lowercasedSearch) ||
+          (entity.description && entity.description.toLowerCase().includes(lowercasedSearch))
+      );
+    }
+    
+    // Apply country filter
+    if (filters.country) {
+      result = result.filter(entity => 
+        entity.country === filters.country
+      );
+    }
+    
+    // Apply state filter
+    if (filters.state) {
+      result = result.filter(entity => 
+        entity.state.toLowerCase().includes(filters.state.toLowerCase())
+      );
+    }
+    
+    setFilteredEntities(result);
+  }, [searchTerm, filters, entities]);
+
+  const fetchRegulations = async () => {
+    try {
+      setLoadingRegulations(true);
+      const response = await axios.get("http://localhost:5000/regulations");
+      setRegulations(response.data.regulations || []);
+      setLoadingRegulations(false);
+    } catch (err) {
+      console.error("Error fetching regulations:", err);
+      setErrorMessage("Failed to fetch regulations. Please try again later.");
+      setLoadingRegulations(false);
+    }
+  };
+
+  const fetchCountryCodes = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/country_codes");
+      setCountries(response.data.countries || []);
+      
+      // If India is in the list, set it as default
+      const india = response.data.countries.find(country => country.country === "India");
+      if (india) {
+        setContactCountryCode(india.country_code);
+        setAlternateContactCountryCode(india.country_code);
+      }
+    } catch (err) {
+      console.error("Error fetching country codes:", err);
+      setErrorMessage("Failed to fetch country codes. Please try again later.");
     }
   };
 
@@ -65,13 +154,71 @@ const Entities = () => {
     }
   };
 
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters({
+      ...filters,
+      [name]: value
+    });
+  };
+
+  const resetFilters = () => {
+    setSearchTerm("");
+    setFilters({
+      country: "",
+      state: ""
+    });
+  };
+
+  const handleRegulationChange = (e) => {
+    const regulationId = e.target.value;
+    const isChecked = e.target.checked;
+    
+    if (isChecked) {
+      // Add regulation to selected list
+      setNewEntity({
+        ...newEntity,
+        selected_regulations: [...newEntity.selected_regulations, regulationId]
+      });
+    } else {
+      // Remove regulation from selected list
+      setNewEntity({
+        ...newEntity,
+        selected_regulations: newEntity.selected_regulations.filter(id => id !== regulationId)
+      });
+    }
+  };
+
+  const handleCountryChange = (e) => {
+    const selectedCountry = e.target.value;
+    setNewEntity({ ...newEntity, country: selectedCountry });
+    
+    // Update country code if country changes
+    const countryData = countries.find(country => country.country === selectedCountry);
+    if (countryData) {
+      setContactCountryCode(countryData.country_code);
+      setAlternateContactCountryCode(countryData.country_code);
+    }
+  };
+
   const handleAddEntity = async (e) => {
     e.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
 
     try {
-      const response = await axios.post("http://localhost:5000/add_entity", newEntity);
+      // Combine country code with phone numbers
+      const formData = {
+        ...newEntity,
+        contact_phno: `${contactCountryCode} ${newEntity.contact_phno}`,
+        alternate_contact: `${alternateContactCountryCode} ${newEntity.alternate_contact}`
+      };
+      
+      const response = await axios.post("http://localhost:5000/add_entity", formData);
       setSuccessMessage(response.data.message);
       
       // Reset form and refresh entities list
@@ -81,14 +228,19 @@ const Entities = () => {
         contact_phno: "",
         alternate_contact: "",
         description: "",
-        country: "",
+        country: "India",
         contact_name: "",
         alternate_contact_name: "",
         state: "",
         pincode: "",
         admin_email: "",
-        admin_password: ""
+        admin_password: "",
+        selected_regulations: []
       });
+      
+      // Reset country codes to default
+      setContactCountryCode("+91");
+      setAlternateContactCountryCode("+91");
       
       // Close the form after a short delay
       setTimeout(() => {
@@ -155,14 +307,18 @@ const Entities = () => {
       contact_phno: "",
       alternate_contact: "",
       description: "",
-      country: "",
+      country: "India",
       contact_name: "",
       alternate_contact_name: "",
       state: "",
       pincode: "",
       admin_email: "",
-      admin_password: ""
+      admin_password: "",
+      selected_regulations: []
     });
+    // Reset country codes to default
+    setContactCountryCode("+91");
+    setAlternateContactCountryCode("+91");
   };
 
   const cancelEdit = () => {
@@ -170,6 +326,23 @@ const Entities = () => {
     setCurrentEntity(null);
     setErrorMessage("");
     setSuccessMessage("");
+  };
+
+  // Get unique countries and states for filters
+  const getUniqueCountries = () => {
+    const countriesSet = new Set();
+    entities.forEach(entity => {
+      if (entity.country) countriesSet.add(entity.country);
+    });
+    return Array.from(countriesSet).sort();
+  };
+
+  const getUniqueStates = () => {
+    const statesSet = new Set();
+    entities.forEach(entity => {
+      if (entity.state) statesSet.add(entity.state);
+    });
+    return Array.from(statesSet).sort();
   };
 
   return (
@@ -236,18 +409,32 @@ const Entities = () => {
 
                 <div className="form-group">
                   <label htmlFor="contact_phno">Contact Phone*</label>
-                  <input
-                    type="text"
-                    id="contact_phno"
-                    name="contact_phno"
-                    value={newEntity.contact_phno}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <div className="phone-input-container">
+                    <select 
+                      className="country-code-select"
+                      value={contactCountryCode}
+                      onChange={(e) => setContactCountryCode(e.target.value)}
+                    >
+                      {countries.map(country => (
+                        <option key={country.country} value={country.country_code}>
+                          {country.country} ({country.country_code})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      id="contact_phno"
+                      name="contact_phno"
+                      value={newEntity.contact_phno}
+                      onChange={handleInputChange}
+                      className="phone-input"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="alternate_contact_name">Alternate Contact Name*</label>
+                  <label htmlFor="alternate_contact_name">Alternate Contact Name</label>
                   <input
                     type="text"
                     id="alternate_contact_name"
@@ -259,27 +446,46 @@ const Entities = () => {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="alternate_contact">Alternate Contact Phone*</label>
-                  <input
-                    type="text"
-                    id="alternate_contact"
-                    name="alternate_contact"
-                    value={newEntity.alternate_contact}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <label htmlFor="alternate_contact">Alternate Contact Phone</label>
+                  <div className="phone-input-container">
+                    <select 
+                      className="country-code-select"
+                      value={alternateContactCountryCode}
+                      onChange={(e) => setAlternateContactCountryCode(e.target.value)}
+                    >
+                      {countries.map(country => (
+                        <option key={`alt-${country.country}`} value={country.country_code}>
+                          {country.country} ({country.country_code})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      id="alternate_contact"
+                      name="alternate_contact"
+                      value={newEntity.alternate_contact}
+                      onChange={handleInputChange}
+                      className="phone-input"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="form-group">
                   <label htmlFor="country">Country*</label>
-                  <input
-                    type="text"
+                  <select
                     id="country"
                     name="country"
                     value={newEntity.country}
-                    onChange={handleInputChange}
+                    onChange={handleCountryChange}
                     required
-                  />
+                  >
+                    {countries.map(country => (
+                      <option key={`country-${country.country}`} value={country.country}>
+                        {country.country}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="form-group">
@@ -328,6 +534,34 @@ const Entities = () => {
                     onChange={handleInputChange}
                     required
                   />
+                </div>
+
+                <div className="form-group full-width">
+                  <label>Select Applicable Regulations:</label>
+                  {loadingRegulations ? (
+                    <p>Loading regulations...</p>
+                  ) : (
+                    <div className="regulations-container">
+                      {regulations.length === 0 ? (
+                        <p>No regulations available</p>
+                      ) : (
+                        regulations.map((regulation) => (
+                          <div key={regulation.regulation_id} className="regulation-item">
+                            <input
+                              type="checkbox"
+                              id={`reg-${regulation.regulation_id}`}
+                              value={regulation.regulation_id}
+                              checked={newEntity.selected_regulations.includes(regulation.regulation_id)}
+                              onChange={handleRegulationChange}
+                            />
+                            <label htmlFor={`reg-${regulation.regulation_id}`}>
+                              {regulation.regulation_name} ({regulation.regulation_id})
+                            </label>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-group full-width">
@@ -408,14 +642,28 @@ const Entities = () => {
 
                 <div className="form-group">
                   <label htmlFor="edit_contact_phno">Contact Phone*</label>
-                  <input
-                    type="text"
-                    id="edit_contact_phno"
-                    name="contact_phno"
-                    value={currentEntity.contact_phno}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <div className="phone-input-container">
+                    <select 
+                      className="country-code-select"
+                      value={contactCountryCode}
+                      onChange={(e) => setContactCountryCode(e.target.value)}
+                    >
+                      {countries.map(country => (
+                        <option key={country.country} value={country.country_code}>
+                          {country.country} ({country.country_code})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      id="edit_contact_phno"
+                      name="contact_phno"
+                      value={currentEntity.contact_phno}
+                      onChange={handleInputChange}
+                      className="phone-input"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="form-group">
@@ -432,26 +680,45 @@ const Entities = () => {
 
                 <div className="form-group">
                   <label htmlFor="edit_alternate_contact">Alternate Contact Phone*</label>
-                  <input
-                    type="text"
-                    id="edit_alternate_contact"
-                    name="alternate_contact"
-                    value={currentEntity.alternate_contact}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <div className="phone-input-container">
+                    <select 
+                      className="country-code-select"
+                      value={alternateContactCountryCode}
+                      onChange={(e) => setAlternateContactCountryCode(e.target.value)}
+                    >
+                      {countries.map(country => (
+                        <option key={`alt-${country.country}`} value={country.country_code}>
+                          {country.country} ({country.country_code})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      id="edit_alternate_contact"
+                      name="alternate_contact"
+                      value={currentEntity.alternate_contact}
+                      onChange={handleInputChange}
+                      className="phone-input"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="form-group">
                   <label htmlFor="edit_country">Country*</label>
-                  <input
-                    type="text"
+                  <select
                     id="edit_country"
                     name="country"
                     value={currentEntity.country}
                     onChange={handleInputChange}
                     required
-                  />
+                  >
+                    {countries.map(country => (
+                      <option key={`country-${country.country}`} value={country.country}>
+                        {country.country}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="form-group">
@@ -504,37 +771,105 @@ const Entities = () => {
 
         {!showAddForm && !showEditForm && (
           <>
+            {/* Search and Filter Section */}
+            <div className="search-filter-container">
+              <div className="search-box">
+                <FaSearch className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search entities..."
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  className="search-input"
+                />
+              </div>
+              
+              <button 
+                className="filter-toggle-btn"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <FaFilter /> {showFilters ? 'Hide Filters' : 'Show Filters'}
+        </button>
+      </div>
+
+            {showFilters && (
+              <div className="filters-container">
+                <div className="filter-group">
+                  <label htmlFor="country">Country:</label>
+                  <select
+                    id="country"
+                    name="country"
+                    value={filters.country}
+                    onChange={handleFilterChange}
+                  >
+                    <option value="">All Countries</option>
+                    {getUniqueCountries().map(country => (
+                      <option key={country} value={country}>
+                        {country}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="filter-group">
+                  <label htmlFor="state">State:</label>
+                  <select
+                    id="state"
+                    name="state"
+                    value={filters.state}
+                    onChange={handleFilterChange}
+                  >
+                    <option value="">All States</option>
+                    {getUniqueStates().map(state => (
+                      <option key={state} value={state}>
+                        {state}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <button className="reset-filters-btn" onClick={resetFilters}>
+                  Reset Filters
+                </button>
+              </div>
+            )}
+
             {loading ? (
               <div className="loading">Loading entities...</div>
             ) : error ? (
               <div className="error-message">{error}</div>
-            ) : entities.length === 0 ? (
+            ) : filteredEntities.length === 0 ? (
               <div className="no-entities">
-                <p>No entities found. Add a new entity to get started.</p>
+                {entities.length === 0 ? 
+                  "No entities found. Add a new entity to get started." : 
+                  "No entities match your search criteria."}
               </div>
             ) : (
               <div className="entities-table-container">
+                <div className="results-count">
+                  Showing {filteredEntities.length} of {entities.length} entities
+                </div>
                 <table className="entities-table">
-                  <thead>
-                    <tr>
+          <thead>
+            <tr>
                       <th>Entity ID</th>
                       <th>Name</th>
-                      <th>Location</th>
+              <th>Location</th>
                       <th>Contact Name</th>
-                      <th>Contact Phone</th>
-                      <th>Country</th>
+              <th>Contact Phone</th>
+              <th>Country</th>
                       <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {entities.map((entity) => (
-                      <tr key={entity.entity_id}>
+            </tr>
+          </thead>
+          <tbody>
+                    {filteredEntities.map((entity) => (
+              <tr key={entity.entity_id}>
                         <td>{entity.entity_id}</td>
-                        <td>{entity.entity_name}</td>
-                        <td>{entity.location}</td>
+                <td>{entity.entity_name}</td>
+                <td>{entity.location}</td>
                         <td>{entity.contact_name}</td>
-                        <td>{entity.contact_phno}</td>
-                        <td>{entity.country}</td>
+                <td>{entity.contact_phno}</td>
+                <td>{entity.country}</td>
                         <td className="actions-cell">
                           <button
                             className="btn-edit"
@@ -548,15 +883,15 @@ const Entities = () => {
                           >
                             Delete
                           </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
               </div>
             )}
           </>
-        )}
+      )}
       </div>
     </div>
   );

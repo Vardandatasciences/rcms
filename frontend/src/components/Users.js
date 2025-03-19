@@ -3,9 +3,12 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 import "./Users.css"; // Import CSS for styling
+import "./SearchFilter.css"; // Import search and filter styles
+import { FaSearch, FaFilter } from "react-icons/fa"; // Import icons
 
 const Users = () => {
   const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -24,7 +27,17 @@ const Users = () => {
     password: "",
     role: ""
   });
+  const [countries, setCountries] = useState([]);
+  const [mobileCountryCode, setMobileCountryCode] = useState("+91"); // Default to India
   const navigate = useNavigate();
+  
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    entityId: "",
+    role: ""
+  });
 
   useEffect(() => {
     // Check if user is logged in
@@ -34,8 +47,8 @@ const Users = () => {
       return;
     }
 
-    // Fetch users and entities in parallel
-    Promise.all([fetchUsers(), fetchEntities()]).catch(err => {
+    // Fetch users, entities, and country codes in parallel
+    Promise.all([fetchUsers(), fetchEntities(), fetchCountryCodes()]).catch(err => {
       console.error("Error in initial data loading:", err);
       setLoading(false);
     });
@@ -45,8 +58,10 @@ const Users = () => {
     try {
       setLoading(true);
       const response = await axios.get("http://localhost:5000/users");
-      setUsers(response.data.users || []);
-      return response.data.users;
+      const usersData = response.data.users || [];
+      setUsers(usersData);
+      setFilteredUsers(usersData);
+      return usersData;
     } catch (err) {
       console.error("Error fetching users:", err);
       setError("Failed to fetch users. Please try again later.");
@@ -67,6 +82,50 @@ const Users = () => {
     }
   };
 
+  const fetchCountryCodes = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/country_codes");
+      setCountries(response.data.countries || []);
+      
+      // If India is in the list, set it as default
+      const india = response.data.countries.find(country => country.country === "India");
+      if (india) {
+        setMobileCountryCode(india.country_code);
+      }
+      return response.data.countries;
+    } catch (err) {
+      console.error("Error fetching country codes:", err);
+      throw err;
+    }
+  };
+
+  // Apply search and filters
+  useEffect(() => {
+    let result = users;
+    
+    // Apply search term
+    if (searchTerm) {
+      const lowercasedSearch = searchTerm.toLowerCase();
+      result = result.filter(
+        user => 
+          user.user_id.toLowerCase().includes(lowercasedSearch) ||
+          user.user_name.toLowerCase().includes(lowercasedSearch) ||
+          user.email_id.toLowerCase().includes(lowercasedSearch) ||
+          (user.address && user.address.toLowerCase().includes(lowercasedSearch))
+      );
+    }
+
+    // Apply filters
+    if (filters.entityId) {
+      result = result.filter(user => user.entity_id === filters.entityId);
+    }
+    if (filters.role) {
+      result = result.filter(user => user.role === filters.role);
+    }
+
+    setFilteredUsers(result);
+  }, [users, searchTerm, filters]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (showEditForm) {
@@ -76,13 +135,29 @@ const Users = () => {
     }
   };
 
+  const handleCountryChange = (e) => {
+    const selectedCountry = e.target.value;
+    
+    // Update country code if country changes
+    const countryData = countries.find(country => country.country === selectedCountry);
+    if (countryData) {
+      setMobileCountryCode(countryData.country_code);
+    }
+  };
+
   const handleAddUser = async (e) => {
     e.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
 
     try {
-      const response = await axios.post("http://localhost:5000/add_user", newUser);
+      // Combine country code with mobile number
+      const formData = {
+        ...newUser,
+        mobile_no: `${mobileCountryCode} ${newUser.mobile_no}`
+      };
+      
+      const response = await axios.post("http://localhost:5000/add_user", formData);
       setSuccessMessage(response.data.message);
       
       // Reset form and refresh users list
@@ -101,7 +176,7 @@ const Users = () => {
       setTimeout(() => {
         setShowAddForm(false);
         setSuccessMessage("");
-        fetchUsers();
+    fetchUsers();
       }, 2000);
     } catch (error) {
       if (error.response && error.response.status === 409) {
@@ -114,6 +189,13 @@ const Users = () => {
   };
 
   const handleEditUser = (user) => {
+    // Extract country code from mobile number if it exists
+    if (user.mobile_no && user.mobile_no.includes(" ")) {
+      const parts = user.mobile_no.split(" ");
+      setMobileCountryCode(parts[0]);
+      user.mobile_no = parts[1]; // Set only the number part
+    }
+    
     setCurrentUser(user);
     setShowEditForm(true);
     setShowAddForm(false);
@@ -125,7 +207,13 @@ const Users = () => {
     setSuccessMessage("");
 
     try {
-      const response = await axios.put(`http://localhost:5000/update_user/${currentUser.user_id}`, currentUser);
+      // Combine country code with mobile number
+      const formData = {
+        ...currentUser,
+        mobile_no: `${mobileCountryCode} ${currentUser.mobile_no}`
+      };
+      
+      const response = await axios.put(`http://localhost:5000/update_user/${currentUser.user_id}`, formData);
       setSuccessMessage(response.data.message);
       
       // Close the form after a short delay
@@ -177,6 +265,26 @@ const Users = () => {
     setCurrentUser(null);
     setErrorMessage("");
     setSuccessMessage("");
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters({
+      ...filters,
+      [name]: value
+    });
+  };
+
+  const resetFilters = () => {
+    setSearchTerm("");
+    setFilters({
+      entityId: "",
+      role: ""
+      });
   };
 
   return (
@@ -260,14 +368,28 @@ const Users = () => {
 
                 <div className="form-group">
                   <label htmlFor="mobile_no">Mobile No*</label>
-                  <input
-                    type="text"
-                    id="mobile_no"
-                    name="mobile_no"
-                    value={newUser.mobile_no}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <div className="phone-input-container">
+                    <select 
+                      className="country-code-select"
+                      value={mobileCountryCode}
+                      onChange={(e) => setMobileCountryCode(e.target.value)}
+                    >
+                      {countries.map(country => (
+                        <option key={country.country} value={country.country_code}>
+                          {country.country} ({country.country_code})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      id="mobile_no"
+                      name="mobile_no"
+                      value={newUser.mobile_no}
+                      onChange={handleInputChange}
+                      className="phone-input"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="form-group">
@@ -380,14 +502,28 @@ const Users = () => {
 
                 <div className="form-group">
                   <label htmlFor="edit_mobile_no">Mobile No*</label>
-                  <input
-                    type="text"
-                    id="edit_mobile_no"
-                    name="mobile_no"
-                    value={currentUser.mobile_no}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <div className="phone-input-container">
+                    <select 
+                      className="country-code-select"
+                      value={mobileCountryCode}
+                      onChange={(e) => setMobileCountryCode(e.target.value)}
+                    >
+                      {countries.map(country => (
+                        <option key={country.country} value={country.country_code}>
+                          {country.country} ({country.country_code})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      id="edit_mobile_no"
+                      name="mobile_no"
+                      value={currentUser.mobile_no}
+                      onChange={handleInputChange}
+                      className="phone-input"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="form-group">
@@ -413,7 +549,6 @@ const Users = () => {
                   >
                     <option value="Admin">Admin</option>
                     <option value="User">User</option>
-                
                   </select>
                 </div>
               </div>
@@ -432,35 +567,104 @@ const Users = () => {
 
         {!showAddForm && !showEditForm && (
           <>
+            {/* Search and Filter Section */}
+            <div className="search-filter-container">
+              <div className="search-box">
+                <FaSearch className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search users..."
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  className="search-input"
+                />
+              </div>
+              
+              <button 
+                className="filter-toggle-btn"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <FaFilter /> {showFilters ? 'Hide Filters' : 'Show Filters'}
+        </button>
+      </div>
+
+            {showFilters && (
+              <div className="filters-container">
+                <div className="filter-group">
+                  <label htmlFor="entityId">Entity:</label>
+                  <select
+                    id="entityId"
+                    name="entityId"
+                    value={filters.entityId}
+                    onChange={handleFilterChange}
+                  >
+                    <option value="">All Entities</option>
+                    {entities.map((entity) => (
+                      <option key={entity.entity_id} value={entity.entity_id}>
+                        {entity.entity_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="filter-group">
+                  <label htmlFor="role">Role:</label>
+                  <select
+                    id="role"
+                    name="role"
+                    value={filters.role}
+                    onChange={handleFilterChange}
+                  >
+                    <option value="">All Roles</option>
+                    <option value="Admin">Admin</option>
+                    <option value="User">User</option>
+                  </select>
+                </div>
+                
+                <button className="reset-filters-btn" onClick={resetFilters}>
+                  Reset Filters
+                </button>
+              </div>
+            )}
+
             {loading ? (
               <div className="loading">Loading users...</div>
             ) : error ? (
               <div className="error-message">{error}</div>
-            ) : users.length === 0 ? (
+            ) : filteredUsers.length === 0 ? (
               <div className="no-users">
-                <p>No users found. Add a new user to get started.</p>
+                {users.length === 0 ? 
+                  "No users found. Add a new user to get started." : 
+                  "No users match your search criteria."}
               </div>
             ) : (
               <div className="users-table-container">
+                <div className="results-count">
+                  Showing {filteredUsers.length} of {users.length} users
+                </div>
                 <table className="users-table">
-                  <thead>
-                    <tr>
-                      <th>User ID</th>
+          <thead>
+            <tr>
+              <th>User ID</th>
                       <th>Name</th>
                       <th>Entity</th>
+              <th>Address</th>
+              <th>Mobile No</th>
                       <th>Email</th>
-                      <th>Role</th>
+              <th>Role</th>
                       <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((user) => (
-                      <tr key={user.user_id}>
-                        <td>{user.user_id}</td>
+            </tr>
+          </thead>
+          <tbody>
+                    {filteredUsers.map((user) => (
+              <tr key={user.user_id}>
+                <td>{user.user_id}</td>
                         <td>{user.user_name}</td>
-                        <td>{user.entity_name}</td>
-                        <td>{user.email_id}</td>
-                        <td>{user.role}</td>
+                <td>{user.entity_name}</td>
+                        <td>{user.address}</td>
+                <td>{user.mobile_no}</td>
+                <td>{user.email_id}</td>
+                <td>{user.role}</td>
                         <td className="actions-cell">
                           <button
                             className="btn-edit"
@@ -473,16 +677,16 @@ const Users = () => {
                             onClick={() => handleDeleteUser(user.user_id)}
                           >
                             Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
               </div>
             )}
           </>
-        )}
+      )}
       </div>
     </div>
   );

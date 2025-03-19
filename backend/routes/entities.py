@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from models import db
-from models.models import EntityMaster, Users
+from models.models import EntityMaster, Users,CountryCodes
 import traceback
 
 entities_bp = Blueprint('entities', __name__)
@@ -160,3 +160,28 @@ def delete_entity(entity_id):
     except Exception as e:
         print("Error:", traceback.format_exc())
         return jsonify({"error": str(e)}), 500 
+    
+@entities_bp.route('/country_codes', methods=['GET'])
+def get_country_codes():
+    try:
+        # Fetch all country codes
+        countries = CountryCodes.query.all()
+        
+        # Convert to JSON response
+        countries_list = [
+            {
+                "country": country.country,
+                "country_code": country.country_code
+            }
+            for country in countries
+        ]
+        
+        # Sort by country name, but put India first
+        countries_list.sort(key=lambda x: (0 if x["country"].lower() == "india" else 1, x["country"]))
+        
+        return jsonify({"countries": countries_list}), 200
+    
+    except Exception as e:
+        print("Error:", str(e))
+        print(traceback.format_exc())  # Print full traceback for debugging
+        return jsonify({"error": str(e)}), 500

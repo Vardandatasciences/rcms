@@ -1,7 +1,8 @@
 from flask import Blueprint, jsonify, request
 from models import db
-from models.models import RegulationMaster
+from models.models import RegulationMaster,EntityRegulation,ActivityMaster,Category
 import traceback
+from sqlalchemy.orm import aliased
 
 regulations_bp = Blueprint('regulations', __name__)
 
@@ -148,3 +149,147 @@ def get_regulation_details(regulation_id):
         print("Error:", str(e))
         print(traceback.format_exc())  # Print full traceback for debugging
         return jsonify({"error": str(e)}), 500 
+
+@regulations_bp.route('/entity_regulations/<string:entity_id>', methods=['GET'])
+def get_entity_regulations(entity_id):
+    try:
+        if not entity_id:
+            return jsonify({"error": "Entity ID is required"}), 400
+            
+        # Query regulations assigned to the entity
+        EntityRegulationAlias = aliased(EntityRegulation)
+        RegulationMasterAlias = aliased(RegulationMaster)
+        CategoryAlias = aliased(Category)
+
+        entity_regulations = db.session.query(
+                RegulationMasterAlias.regulation_id,
+                RegulationMasterAlias.regulation_name,
+                RegulationMasterAlias.regulatory_body,  # Added regulatory_body
+                CategoryAlias.category_type  # Fetch category_type from Category table
+            )\
+            .join(EntityRegulationAlias, RegulationMasterAlias.regulation_id == EntityRegulationAlias.regulation_id)\
+            .join(CategoryAlias, RegulationMasterAlias.category_id == CategoryAlias.category_id)\
+            .filter(
+                EntityRegulationAlias.entity_id == entity_id,
+                (EntityRegulationAlias.obsolete_current != 'O') | (EntityRegulationAlias.obsolete_current.is_(None))
+            )\
+            .all()
+
+        print(entity_regulations)
+        
+        # Corrected list comprehension to include regulatory_body
+        regulations_list = [{
+            "regulation_id": reg_id,
+            "regulation_name": reg_name,
+            "regulatory_body": regulatory_body,  # Added regulatory_body
+            "category_type": category_type
+        } for reg_id, reg_name, regulatory_body, category_type in entity_regulations]  # Unpacking correctly
+
+        print(regulations_list)
+        
+        return jsonify({"entity_regulations": regulations_list}), 200
+        
+    except Exception as e:
+        print(f"Error fetching entity regulations: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+    
+@regulations_bp.route('/add_entity_regulations', methods=['POST', 'OPTIONS'])
+def add_entity_regulations():
+    if request.method == 'OPTIONS':
+        # Handle preflight request
+        response = jsonify({'message': 'OK'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        return response
+        
+    try:
+        data = request.json
+        entity_id = data.get('entity_id')
+        regulation_ids = data.get('regulation_ids', [])
+        
+        if not entity_id:
+            return jsonify({"error": "Entity ID is required"}), 400
+        
+        if not regulation_ids:
+            return jsonify({"error": "At least one regulation ID is required"}), 400
+        
+        # First, get all existing entity regulations
+        existing_regulations = EntityRegulation.query.filter_by(entity_id=entity_id).all()
+        existing_regulation_ids = [reg.regulation_id for reg in existing_regulations]
+        
+        # Identify regulations to add and remove
+        regulations_to_add = [reg_id for reg_id in regulation_ids if reg_id not in existing_regulation_ids]
+        regulations_to_remove = [reg_id for reg_id in existing_regulation_ids if reg_id not in regulation_ids]
+        
+        # Add new regulations
+        for regulation_id in regulations_to_add:
+            # Count mandatory and optional activities
+            mandatory_count = ActivityMaster.query.filter(
+                ActivityMaster.regulation_id == regulation_id,
+                ActivityMaster.mandatory_optional == "M",
+                (ActivityMaster.obsolete_current != "O") | (ActivityMaster.obsolete_current.is_(None))
+            ).count()
+            
+            optional_count = ActivityMaster.query.filter(
+                ActivityMaster.regulation_id == regulation_id,
+                ActivityMaster.mandatory_optional == "O",
+                (ActivityMaster.obsolete_current != "O") | (ActivityMaster.obsolete_current.is_(None))
+            ).count()
+            
+            # Create new entity regulation
+            new_entity_regulation = EntityRegulation(
+                entity_id=entity_id,
+                regulation_id=regulation_id,
+                mandatory_activities=mandatory_count,
+                optional_activities=optional_count,
+                obsolete_current=None
+            )
+            db.session.add(new_entity_regulation)
+        
+        # Mark removed regulations as obsolete
+        for regulation_id in regulations_to_remove:
+            entity_regulation = EntityRegulation.query.filter_by(
+                entity_id=entity_id,
+                regulation_id=regulation_id
+            ).first()
+            
+            if entity_regulation:
+                entity_regulation.obsolete_current = 'O'
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Entity regulations updated successfully",
+            "added": len(regulations_to_add),
+            "removed": len(regulations_to_remove)
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print("Error:", str(e))
+        print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
+
+@regulations_bp.route('/categories', methods=['GET'])
+def get_categories():
+    try:
+        categories = Category.query.filter(
+            (Category.obsolete_current != "O") | (Category.obsolete_current.is_(None))
+        ).all()
+        
+        category_list = [
+            {
+                "category_id": category.category_id,
+                "category_type": category.category_type,
+                "remarks": category.Remarks,
+            }
+            for category in categories
+        ]
+        return jsonify({"categories": category_list}), 200
+
+    except Exception as e:
+        print("Error:", str(e))
+        return jsonify({"error": str(e)}), 500

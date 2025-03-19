@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from models import db
-from models.models import ActivityMaster,RegulationMaster,EntityRegulationTasks,HolidayMaster
+from models.models import ActivityMaster,RegulationMaster,EntityRegulationTasks,HolidayMaster,EntityRegulation
 from sqlalchemy import func
 import traceback
 from dateutil.relativedelta import relativedelta
@@ -36,6 +36,39 @@ def get_activities():
     ]
     
     return jsonify({"activities": activities_list})
+
+
+# @activities_bp.route('/activities/entity/<string:entity_id>', methods=['GET'])
+# def get_entity_activities(entity_id):
+#     try:
+#         print(f"Fetching activities for entity: {entity_id}")  # Debug log
+        
+#         # Query activities associated with the entity's regulations
+#         activities = db.session.query(ActivityMaster).join(
+#             EntityRegulation,
+#             ActivityMaster.regulation_id == EntityRegulation.regulation_id
+#         ).filter(
+#             EntityRegulation.entity_id == entity_id
+#         ).all()
+
+#         activities_list = [{
+#             "regulation_id": activity.regulation_id,
+#             "activity_id": activity.activity_id,
+#             "activity": activity.activity,
+#             "activity_description": activity.activity_description,
+#             "criticality": activity.criticality,
+#             "mandatory_optional": activity.mandatory_optional,
+#             "frequency": activity.frequency
+#         } for activity in activities]
+        
+#         print(f"Found {len(activities_list)} activities")  # Debug log
+        
+#         return jsonify({"activities": activities_list}), 200
+
+#     except Exception as e:
+#         print(f"Error fetching activities: {str(e)}")  # Debug log
+#         return jsonify({"error": str(e)}), 500
+
 
 @activities_bp.route("/add_activity", methods=["POST"])
 def add_activity():
@@ -420,3 +453,4 @@ def adjust_due_date_for_holidays(due_date):
                 break  # If it's not a holiday or weekend, exit the loop
     
     return due_date
+

@@ -427,3 +427,4 @@ def update_task_status():
         print(f"Error in update_task_status: {str(e)}")
         traceback.print_exc()
         return jsonify({'error': 'An error occurred while updating task status'}), 500 
+    

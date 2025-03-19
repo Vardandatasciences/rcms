@@ -268,4 +268,58 @@
     display: inline-block;
   }
 }
+
+/* Regulation selection styling */
+.regulations-container {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.5rem;
+  background-color: #f9fafb;
+}
+
+.regulation-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.regulation-item:hover {
+  background-color: #f0f4f8;
+}
+
+.regulation-item input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.5rem;
+}
+
+.regulation-item label {
+  margin-bottom: 0;
+  cursor: pointer;
+  font-weight: normal;
+}
+
+/* Phone input styling */
+.phone-input-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.country-code-select {
+  width: 40%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: #f9fafb;
+}
+
+.phone-input {
+  width: 60%;
+}
   

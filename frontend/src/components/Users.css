@@ -254,4 +254,24 @@
     display: inline-block;
   }
 }
+
+/* Phone input styling */
+.phone-input-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.country-code-select {
+  width: 40%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: #f9fafb;
+}
+
+.phone-input {
+  width: 60%;
+}
   
