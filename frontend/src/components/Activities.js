@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { 
   FaPlus, FaEdit, FaTrashAlt, FaUserCog, FaExclamationTriangle, 
-  FaCheckCircle, FaSearch, FaFilter, FaSyncAlt, FaSort, FaSortUp, FaSortDown,
-  FaThLarge, FaList, FaChartBar, FaExclamationCircle, FaInfoCircle, FaCheckSquare
+  FaSearch, FaFilter, FaSyncAlt, FaSort, FaSortUp, FaSortDown,
+  FaThLarge, FaList, FaExclamationCircle, FaInfoCircle, 
+  FaCheckCircle, FaClipboardList, FaBuilding, FaUsers
 } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
@@ -17,17 +18,18 @@ const Activities = () => {
   const [user, setUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
-  const [filterCriticality, setFilterCriticality] = useState("all");
-  const [viewMode, setViewMode] = useState("grid"); // grid or list
-  const [stats, setStats] = useState({
-    total: 0,
-    high: 0,
-    medium: 0,
-    low: 0,
-    mandatory: 0,
-    optional: 0
+  const [filterCategories, setFilterCategories] = useState({
+    criticality: "all",
+    status: "all"
   });
-  const [activeStatFilter, setActiveStatFilter] = useState(null);
+  const [viewMode, setViewMode] = useState("grid"); // grid or list
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [stats, setStats] = useState({
+    high: { count: 0, percentage: 0 },
+    medium: { count: 0, percentage: 0 },
+    low: { count: 0, percentage: 0 },
+  });
+  const filterRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,6 +43,43 @@ const Activities = () => {
       navigate("/login");
     }
   }, [navigate]);
+
+  // Improved click outside handler for filter dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (filterRef.current && !filterRef.current.contains(event.target)) {
+        setIsFilterOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Calculate statistics
+  const calculateStats = (activitiesData) => {
+    const totalCount = activitiesData.length;
+    const highCount = activitiesData.filter(a => a.criticality.toLowerCase() === 'high').length;
+    const mediumCount = activitiesData.filter(a => a.criticality.toLowerCase() === 'medium').length;
+    const lowCount = activitiesData.filter(a => a.criticality.toLowerCase() === 'low').length;
+
+    setStats({
+      high: { 
+        count: highCount, 
+        percentage: totalCount ? Math.round((highCount / totalCount) * 100) : 0 
+      },
+      medium: { 
+        count: mediumCount, 
+        percentage: totalCount ? Math.round((mediumCount / totalCount) * 100) : 0 
+      },
+      low: { 
+        count: lowCount, 
+        percentage: totalCount ? Math.round((lowCount / totalCount) * 100) : 0 
+      }
+    });
+  };
 
   // Fetch activities from backend
   const fetchActivities = async () => {
@@ -56,51 +95,6 @@ const Activities = () => {
       console.error("Error fetching activities:", err);
       setError("Failed to fetch activities. Please try again later.");
       setLoading(false);
-    }
-  };
-
-  // Calculate statistics
-  const calculateStats = (activitiesData) => {
-    const stats = {
-      total: activitiesData.length,
-      high: activitiesData.filter(a => a.criticality.toLowerCase() === 'high').length,
-      medium: activitiesData.filter(a => a.criticality.toLowerCase() === 'medium').length,
-      low: activitiesData.filter(a => a.criticality.toLowerCase() === 'low').length,
-      mandatory: activitiesData.filter(a => a.mandatory_optional === 'M').length,
-      optional: activitiesData.filter(a => a.mandatory_optional !== 'M').length
-    };
-    setStats(stats);
-  };
-
-  // Handle stat filter click
-  const handleStatFilter = (statType) => {
-    if (activeStatFilter === statType) {
-      // If clicking the same filter, clear it
-      setActiveStatFilter(null);
-      setFilteredActivities(activities);
-      setFilterCriticality("all");
-    } else {
-      setActiveStatFilter(statType);
-      let filtered;
-      
-      switch(statType) {
-        case 'high':
-        case 'medium':
-        case 'low':
-          filtered = activities.filter(a => a.criticality.toLowerCase() === statType);
-          setFilterCriticality(statType);
-          break;
-        case 'mandatory':
-          filtered = activities.filter(a => a.mandatory_optional === 'M');
-          break;
-        case 'optional':
-          filtered = activities.filter(a => a.mandatory_optional !== 'M');
-          break;
-        default:
-          filtered = activities;
-      }
-      
-      setFilteredActivities(filtered);
     }
   };
 
@@ -127,41 +121,41 @@ const Activities = () => {
     }
   };
 
+  // Handle assign button click
   const handleAssign = (regulationId, activityId) => {
     navigate(`/activities/assign/${regulationId}/${activityId}`);
   };
 
-  // Handle search
+  // Enhanced filter function to handle multiple filter categories
   useEffect(() => {
-    if (searchTerm === "") {
-      if (activeStatFilter) {
-        handleStatFilter(activeStatFilter);
-      } else {
-        setFilteredActivities(activities);
-      }
-    } else {
-      const filtered = activities.filter(
+    let filtered = [...activities];
+    
+    // Filter by criticality
+    if (filterCategories.criticality !== "all") {
+      filtered = filtered.filter(
+        activity => activity.criticality.toLowerCase() === filterCategories.criticality.toLowerCase()
+      );
+    }
+    
+    // Filter by status (mandatory/optional)
+    if (filterCategories.status !== "all") {
+      const statusValue = filterCategories.status === "mandatory" ? "M" : "O";
+      filtered = filtered.filter(
+        activity => activity.mandatory_optional === statusValue
+      );
+    }
+    
+    // Apply search term if exists
+    if (searchTerm) {
+      filtered = filtered.filter(
         activity =>
           activity.activity.toLowerCase().includes(searchTerm.toLowerCase()) ||
           activity.regulation_id.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      setFilteredActivities(filtered);
     }
-  }, [searchTerm, activities]);
-
-  // Handle filter
-  useEffect(() => {
-    if (activeStatFilter) return; // Skip if stat filter is active
     
-    if (filterCriticality === "all") {
-      setFilteredActivities(activities);
-    } else {
-      const filtered = activities.filter(
-        activity => activity.criticality.toLowerCase() === filterCriticality.toLowerCase()
-      );
-      setFilteredActivities(filtered);
-    }
-  }, [filterCriticality, activities, activeStatFilter]);
+    setFilteredActivities(filtered);
+  }, [searchTerm, activities, filterCategories]);
 
   // Handle sort
   const requestSort = (key) => {
@@ -212,14 +206,48 @@ const Activities = () => {
   const getCriticalityIcon = (criticality) => {
     switch (criticality.toLowerCase()) {
       case 'high':
-        return <FaExclamationCircle className="criticality-icon high" />;
+        return <FaExclamationCircle />;
       case 'medium':
-        return <FaInfoCircle className="criticality-icon medium" />;
+        return <FaInfoCircle />;
       case 'low':
-        return <FaCheckSquare className="criticality-icon low" />;
+        return <FaCheckCircle />;
       default:
-        return <FaInfoCircle className="criticality-icon medium" />;
+        return <FaInfoCircle />;
     }
+  };
+
+  // Toggle filter dropdown visibility
+  const toggleFilter = () => {
+    setIsFilterOpen(!isFilterOpen);
+  };
+
+  // Apply filter by category and value
+  const applyFilter = (category, value) => {
+    setFilterCategories(prev => ({
+      ...prev,
+      [category]: value
+    }));
+  };
+
+  // Filter activities by criticality from stat cards
+  const filterByCriticality = (criticality) => {
+    setFilterCategories(prev => ({
+      ...prev,
+      criticality: criticality
+    }));
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setFilterCategories({
+      criticality: "all",
+      status: "all"
+    });
+  };
+
+  // Check if any filter is active
+  const isFilterActive = () => {
+    return filterCategories.criticality !== "all" || filterCategories.status !== "all";
   };
 
   if (!user) return null;
@@ -228,94 +256,66 @@ const Activities = () => {
     <div className="activities-container">
       <Navbar />
       <div className="activities-content">
-        <div className="activities-header">
-          <div className="header-title">
-            <h1>Activities Management</h1>
-            <p>View, add, edit, and delete activities</p>
-          </div>
-          <Link to="/activities/add" className="btn-add">
-            <FaPlus className="btn-icon" />
-            <span>Add New Activity</span>
-          </Link>
-        </div>
-
-        {/* Statistics Dashboard */}
-        <div className="statistics-dashboard">
+        
+        {/* Statistics Cards with enhanced animations */}
+        <div className="statistics-cards">
           <div 
-            className={`stat-card total ${activeStatFilter === null ? 'active' : ''}`}
-            onClick={() => handleStatFilter(null)}
+            className={`stat-card high-card ${filterCategories.criticality === 'high' ? 'active' : ''}`} 
+            onClick={() => filterByCriticality('high')}
           >
-            <div className="stat-icon">
-              <FaChartBar />
-            </div>
-            <div className="stat-content">
-              <h3>Total Activities</h3>
-              <p className="stat-value">{stats.total}</p>
-            </div>
-          </div>
-          
-          <div 
-            className={`stat-card high ${activeStatFilter === 'high' ? 'active' : ''}`}
-            onClick={() => handleStatFilter('high')}
-          >
-            <div className="stat-icon">
+            <div className="stat-icon-wrapper">
               <FaExclamationCircle />
             </div>
             <div className="stat-content">
-              <h3>High Criticality</h3>
-              <p className="stat-value">{stats.high}</p>
+              <div className="stat-count">{stats.high.count}</div>
+              <div className="stat-title">High Criticality</div>
+            </div>
+            <div className="stat-percentage">
+              <div className="circular-progress" style={{'--percentage': `${stats.high.percentage}`}}>
+                <div className="inner-circle">
+                  <span>{stats.high.percentage}%</span>
+                </div>
+              </div>
             </div>
           </div>
           
           <div 
-            className={`stat-card medium ${activeStatFilter === 'medium' ? 'active' : ''}`}
-            onClick={() => handleStatFilter('medium')}
+            className={`stat-card medium-card ${filterCategories.criticality === 'medium' ? 'active' : ''}`} 
+            onClick={() => filterByCriticality('medium')}
           >
-            <div className="stat-icon">
+            <div className="stat-icon-wrapper">
               <FaInfoCircle />
             </div>
             <div className="stat-content">
-              <h3>Medium Criticality</h3>
-              <p className="stat-value">{stats.medium}</p>
+              <div className="stat-count">{stats.medium.count}</div>
+              <div className="stat-title">Medium Criticality</div>
+            </div>
+            <div className="stat-percentage">
+              <div className="circular-progress" style={{'--percentage': `${stats.medium.percentage}`}}>
+                <div className="inner-circle">
+                  <span>{stats.medium.percentage}%</span>
+                </div>
+              </div>
             </div>
           </div>
           
           <div 
-            className={`stat-card low ${activeStatFilter === 'low' ? 'active' : ''}`}
-            onClick={() => handleStatFilter('low')}
+            className={`stat-card low-card ${filterCategories.criticality === 'low' ? 'active' : ''}`} 
+            onClick={() => filterByCriticality('low')}
           >
-            <div className="stat-icon">
-              <FaCheckSquare />
-            </div>
-            <div className="stat-content">
-              <h3>Low Criticality</h3>
-              <p className="stat-value">{stats.low}</p>
-            </div>
-          </div>
-          
-          <div 
-            className={`stat-card mandatory ${activeStatFilter === 'mandatory' ? 'active' : ''}`}
-            onClick={() => handleStatFilter('mandatory')}
-          >
-            <div className="stat-icon">
+            <div className="stat-icon-wrapper">
               <FaCheckCircle />
             </div>
             <div className="stat-content">
-              <h3>Mandatory</h3>
-              <p className="stat-value">{stats.mandatory}</p>
+              <div className="stat-count">{stats.low.count}</div>
+              <div className="stat-title">Low Criticality</div>
             </div>
-          </div>
-          
-          <div 
-            className={`stat-card optional ${activeStatFilter === 'optional' ? 'active' : ''}`}
-            onClick={() => handleStatFilter('optional')}
-          >
-            <div className="stat-icon">
-              <FaFilter />
-            </div>
-            <div className="stat-content">
-              <h3>Optional</h3>
-              <p className="stat-value">{stats.optional}</p>
+            <div className="stat-percentage">
+              <div className="circular-progress" style={{'--percentage': `${stats.low.percentage}`}}>
+                <div className="inner-circle">
+                  <span>{stats.low.percentage}%</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -333,7 +333,7 @@ const Activities = () => {
             <FaSearch className="search-icon" />
             <input
               type="text"
-              placeholder="Search activities..."
+              placeholder="Search by activity name or regulation ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
@@ -349,25 +349,89 @@ const Activities = () => {
           </div>
           
           <div className="filter-container">
-            <div className="filter-group">
-              <label htmlFor="criticality-filter">
-                <FaFilter className="filter-icon" />
-                <span>Criticality:</span>
-              </label>
-              <select
-                id="criticality-filter"
-                value={filterCriticality}
-                onChange={(e) => {
-                  setFilterCriticality(e.target.value);
-                  setActiveStatFilter(null);
-                }}
-                className="filter-select"
+            <div className="filter-dropdown" ref={filterRef}>
+              <button 
+                className={`filter-button ${isFilterActive() ? 'active' : ''}`}
+                onClick={toggleFilter}
               >
-                <option value="all">All</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
+                <FaFilter />
+                <span>Filters</span>
+                {isFilterActive() && (
+                  <span className="filter-count">{
+                    Object.values(filterCategories).filter(value => value !== "all").length
+                  }</span>
+                )}
+              </button>
+              
+              {isFilterOpen && (
+                <div className="filter-menu">
+                  {/* Criticality filter section */}
+                  <div className="filter-section">
+                    <div className="filter-menu-header">Criticality</div>
+                    <div 
+                      className={`filter-menu-item ${filterCategories.criticality === 'all' ? 'active' : ''}`}
+                      onClick={() => applyFilter('criticality', 'all')}
+                    >
+                      <FaFilter />
+                      <span>All</span>
+                    </div>
+                    <div 
+                      className={`filter-menu-item ${filterCategories.criticality === 'high' ? 'active' : ''}`}
+                      onClick={() => applyFilter('criticality', 'high')}
+                    >
+                      <FaExclamationCircle style={{ color: 'var(--danger-color)' }} />
+                      <span>High</span>
+                    </div>
+                    <div 
+                      className={`filter-menu-item ${filterCategories.criticality === 'medium' ? 'active' : ''}`}
+                      onClick={() => applyFilter('criticality', 'medium')}
+                    >
+                      <FaInfoCircle style={{ color: 'var(--warning-color)' }} />
+                      <span>Medium</span>
+                    </div>
+                    <div 
+                      className={`filter-menu-item ${filterCategories.criticality === 'low' ? 'active' : ''}`}
+                      onClick={() => applyFilter('criticality', 'low')}
+                    >
+                      <FaCheckCircle style={{ color: 'var(--success-color)' }} />
+                      <span>Low</span>
+                    </div>
+                  </div>
+                  
+                  {/* Status filter section */}
+                  <div className="filter-section">
+                    <div className="filter-menu-header">Status</div>
+                    <div 
+                      className={`filter-menu-item ${filterCategories.status === 'all' ? 'active' : ''}`}
+                      onClick={() => applyFilter('status', 'all')}
+                    >
+                      <FaFilter />
+                      <span>All</span>
+                    </div>
+                    <div 
+                      className={`filter-menu-item ${filterCategories.status === 'mandatory' ? 'active' : ''}`}
+                      onClick={() => applyFilter('status', 'mandatory')}
+                    >
+                      <FaCheckCircle style={{ color: 'var(--primary-color)' }} />
+                      <span>Mandatory</span>
+                    </div>
+                    <div 
+                      className={`filter-menu-item ${filterCategories.status === 'optional' ? 'active' : ''}`}
+                      onClick={() => applyFilter('status', 'optional')}
+                    >
+                      <FaCheckCircle style={{ color: 'var(--gray-500)' }} />
+                      <span>Optional</span>
+                    </div>
+                  </div>
+                  
+                  {/* Clear filters button */}
+                  {isFilterActive() && (
+                    <button className="clear-filters-btn" onClick={clearFilters}>
+                      Clear All Filters
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             
             <div className="view-toggle">
@@ -390,10 +454,20 @@ const Activities = () => {
             <button 
               className="btn-refresh" 
               onClick={fetchActivities}
-              title="Refresh data"
+              title="Refresh activities"
             >
-              <FaSyncAlt className="refresh-icon" />
+              <FaSyncAlt />
             </button>
+
+            <div className="btn-refresh-2">
+              <button 
+                className="btn-add"
+                onClick={() => navigate("/activities/add")}
+              >
+                <FaPlus className="btn-icon" />
+                <span>Add New Activity</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -405,11 +479,11 @@ const Activities = () => {
         ) : filteredActivities.length === 0 ? (
           <div className="no-activities">
             <div className="no-data-icon">
-              <FaCheckCircle />
+              <FaClipboardList />
             </div>
             <h3>No activities found</h3>
             <p>
-              {searchTerm || filterCriticality !== "all" || activeStatFilter
+              {searchTerm || isFilterActive()
                 ? "Try adjusting your search or filters" 
                 : "Click the 'Add New Activity' button to create one"}
             </p>
@@ -426,11 +500,9 @@ const Activities = () => {
                     <span className="regulation-id">{activity.regulation_id}</span>
                     <span className="activity-id">#{activity.activity_id}</span>
                   </div>
-                  <div className="card-badges">
-                    <div className={`criticality-badge ${getCriticalityClass(activity.criticality)}`}>
-                      {getCriticalityIcon(activity.criticality)}
-                      <span>{activity.criticality}</span>
-                    </div>
+                  <div className="criticality-badge">
+                    {getCriticalityIcon(activity.criticality)}
+                    {activity.criticality}
                   </div>
                 </div>
                 
@@ -438,13 +510,13 @@ const Activities = () => {
                   <h3 className="activity-title">{activity.activity}</h3>
                   <div className="activity-meta">
                     <div className="meta-item">
-                      <span className="meta-label">Status:</span>
+                      <span className="meta-label">Status</span>
                       <span className={`meta-value status ${activity.mandatory_optional === "M" ? "mandatory" : "optional"}`}>
                         {activity.mandatory_optional === "M" ? "Mandatory" : "Optional"}
                       </span>
                     </div>
                     <div className="meta-item">
-                      <span className="meta-label">Frequency:</span>
+                      <span className="meta-label">Frequency</span>
                       <span className="meta-value frequency">{activity.frequency || 'N/A'}</span>
                     </div>
                   </div>
@@ -453,24 +525,23 @@ const Activities = () => {
                 <div className="card-actions">
                   <Link
                     to={`/activities/edit/${activity.regulation_id}/${activity.activity_id}`}
-                    className="btn-icon-action btn-edit"
+                    className="btn-action btn-edit"
                     title="Edit activity"
                   >
                     <FaEdit />
                   </Link>
                   <button
-                    className="btn-icon-action btn-delete"
+                    className="btn-action btn-delete"
                     onClick={() => deleteActivity(activity.regulation_id, activity.activity_id)}
                     title="Delete activity"
                   >
                     <FaTrashAlt />
                   </button>
                   <button
-                    className="btn-icon-action btn-assign"
+                    className="btn-text-action"
                     onClick={() => handleAssign(activity.regulation_id, activity.activity_id)}
-                    title="Assign activity"
                   >
-                    <FaUserCog />
+                    Assign
                   </button>
                 </div>
               </div>
@@ -487,7 +558,7 @@ const Activities = () => {
                 <span>ID</span>
                 {getSortIcon('activity_id')}
               </div>
-              <div className="list-cell activity-cell" onClick={() => requestSort('activity')}>
+              <div className="list-cell" onClick={() => requestSort('activity')}>
                 <span>Activity</span>
                 {getSortIcon('activity')}
               </div>
@@ -503,7 +574,7 @@ const Activities = () => {
                 <span>Frequency</span>
                 {getSortIcon('frequency')}
               </div>
-              <div className="list-cell actions-cell">
+              <div className="list-cell">
                 <span>Actions</span>
               </div>
             </div>
@@ -520,7 +591,7 @@ const Activities = () => {
                   <div className="list-cell">
                     <span className="activity-id">#{activity.activity_id}</span>
                   </div>
-                  <div className="list-cell activity-cell">
+                  <div className="list-cell">
                     <span className="activity-title">{activity.activity}</span>
                   </div>
                   <div className="list-cell">
@@ -535,30 +606,29 @@ const Activities = () => {
                     </span>
                   </div>
                   <div className="list-cell">
-                    <span className="frequency-value">{activity.frequency || 'N/A'}</span>
+                    <span className="meta-value frequency">{activity.frequency || 'N/A'}</span>
                   </div>
-                  <div className="list-cell actions-cell">
+                  <div className="list-cell">
                     <div className="list-actions">
                       <Link
                         to={`/activities/edit/${activity.regulation_id}/${activity.activity_id}`}
-                        className="btn-icon-action btn-edit"
+                        className="btn-action btn-edit"
                         title="Edit activity"
                       >
                         <FaEdit />
                       </Link>
                       <button
-                        className="btn-icon-action btn-delete"
+                        className="btn-action btn-delete"
                         onClick={() => deleteActivity(activity.regulation_id, activity.activity_id)}
                         title="Delete activity"
                       >
                         <FaTrashAlt />
                       </button>
                       <button
-                        className="btn-icon-action btn-assign"
+                        className="btn-text-action list-btn-text"
                         onClick={() => handleAssign(activity.regulation_id, activity.activity_id)}
-                        title="Assign activity"
                       >
-                        <FaUserCog />
+                        Assign
                       </button>
                     </div>
                   </div>
