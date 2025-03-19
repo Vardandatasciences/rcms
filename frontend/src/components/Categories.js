@@ -2,9 +2,10 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
-import "./Categories.css"; // Import CSS for styling
-import AddCategory from "./AddCategory"; // Import AddCategory component
-import DeleteCategory from "./DeleteCategory"; // Import DeleteCategory component
+import "./Categories.css";
+import { FaFolder, FaPlus, FaEdit, FaTrashAlt, FaSave, 
+         FaTimes, FaSpinner, FaExclamationTriangle, 
+         FaInfoCircle, FaLayerGroup, FaComment } from "react-icons/fa";
 
 const Categories = () => {
   const [categories, setCategories] = useState([]);
@@ -12,6 +13,7 @@ const Categories = () => {
   const [error, setError] = useState(null);
   const [newCategory, setNewCategory] = useState({ category_type: "", remarks: "" });
   const [isAdding, setIsAdding] = useState(false);
+  const [activeFilter, setActiveFilter] = useState("all");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -79,21 +81,32 @@ const Categories = () => {
     <div className="categories-container">
       <Navbar />
       <div className="categories-content">
-        <h1>Categories Management</h1>
-        <p>View and manage regulation categories</p>
+        <div className="categories-header">
+          <div className="header-title">
+            <h1>Categories Management</h1>
+            <p>View and manage regulation categories</p>
+          </div>
+        </div>
 
-        <div className="categories-actions">
+        <div className="filter-tabs">
+          <div 
+            className="filter-tab active"
+            onClick={() => setActiveFilter("all")}
+          >
+            <FaLayerGroup className="filter-tab-icon" /> All Categories
+          </div>
+
           <button 
             className="btn-add-category" 
             onClick={() => setIsAdding(!isAdding)}
           >
-            {isAdding ? "Cancel" : "Add New Category"}
+            {isAdding ? <><FaTimes /> Cancel</> : <><FaPlus /> Add New Category</>}
           </button>
         </div>
 
         {isAdding && (
           <div className="add-category-form">
-            <h2>Add New Category</h2>
+            <h2><FaFolder /> Add New Category</h2>
             <form onSubmit={handleAddCategory}>
               <div className="form-group">
                 <label htmlFor="category_type">Category Type*</label>
@@ -103,6 +116,7 @@ const Categories = () => {
                   name="category_type"
                   value={newCategory.category_type}
                   onChange={handleInputChange}
+                  placeholder="Enter category name"
                   required
                 />
               </div>
@@ -113,52 +127,86 @@ const Categories = () => {
                   name="remarks"
                   value={newCategory.remarks}
                   onChange={handleInputChange}
+                  placeholder="Add any additional notes or descriptions"
                 />
               </div>
-              <button type="submit" className="btn-submit">
-                Add Category
-              </button>
+              <div className="form-actions">
+                <button type="submit" className="btn-submit">
+                  <FaSave /> Save Category
+                </button>
+                <button type="button" className="btn-cancel" onClick={() => setIsAdding(false)}>
+                  <FaTimes /> Cancel
+                </button>
+              </div>
             </form>
           </div>
         )}
 
         {loading ? (
-          <div className="loading">Loading categories...</div>
+          <div className="loading">
+            <div className="loading-icon"><FaSpinner /></div>
+            <h3 className="loading-message">Loading categories...</h3>
+          </div>
         ) : error ? (
-          <div className="error-message">{error}</div>
-        ) : categories.length === 0 ? (
-          <div className="no-categories">
-            <p>No categories found. Add a new category to get started.</p>
+          <div className="error-message">
+            <div className="error-icon"><FaExclamationTriangle /></div>
+            <h3>Error Loading Categories</h3>
+            <p>{error}</p>
           </div>
         ) : (
-          <div className="categories-table-container">
-            <table className="categories-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Category Type</th>
-                  <th>Remarks</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {categories.map((category) => (
-                  <tr key={category.category_id}>
-                    <td>{category.category_id}</td>
-                    <td>{category.category_type}</td>
-                    <td>{category.remarks || "-"}</td>
-                    <td className="actions-cell">
-                      <button
-                        className="btn-delete"
-                        onClick={() => handleDeleteCategory(category.category_id)}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="categories-grid">
+            {categories.length === 0 ? (
+              <div className="no-categories">
+                <div className="empty-icon"><FaFolder /></div>
+                <h3>No Categories Found</h3>
+                <p>There are no categories yet. Add a new category to get started.</p>
+              </div>
+            ) : (
+              categories.map((category) => (
+                <div className="category-card" key={category.category_id}>
+                  <div className="category-header">
+                    <div className="category-icon">
+                      <FaFolder />
+                    </div>
+                    <div className="category-title">
+                      <h3>{category.category_type}</h3>
+                      <span className="category-id">ID: {category.category_id}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="category-content">
+                    <div className="category-remarks">
+                      <div className="remarks-label">
+                        <FaComment /> Remarks
+                      </div>
+                      <div className="remarks-content">
+                        {category.remarks ? (
+                          category.remarks
+                        ) : (
+                          <span className="empty-remarks">No remarks provided</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="category-footer">
+                    <button
+                      className="category-btn btn-edit"
+                      title="Edit Category"
+                    >
+                      <FaEdit />
+                    </button>
+                    <button
+                      className="category-btn btn-delete"
+                      onClick={() => handleDeleteCategory(category.category_id)}
+                      title="Delete Category"
+                    >
+                      <FaTrashAlt />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>
