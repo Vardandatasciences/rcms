@@ -19,6 +19,7 @@ class ActivityMaster(db.Model):
     reviewer_required = db.Column(db.String(1), nullable=True)
     obsolete_current = db.Column(db.String(45), nullable=True)
 
+    
     def __repr__(self):
         return f"<ActivityMaster {self.activity_id} - {self.activity}>"
 
@@ -113,8 +114,6 @@ class EntityRegulationTasks(db.Model):
     criticality = db.Column(db.String(45), nullable=True)
     internal_external = db.Column(db.String(1), nullable=True)
     documentupload_yes_no = db.Column(db.String(1), nullable=True)
-    last_updated_by = db.Column(db.String(45), nullable=True)
-    last_updated_on = db.Column(db.DateTime, nullable=True, default=datetime.now)
 
     def __repr__(self):
         return f"<EntityRegulationTasks ID: {self.id}, Entity: {self.entity_id}, Regulation: {self.regulation_id}, Activity: {self.activity_id}>"
@@ -176,6 +175,7 @@ class RegulationMaster(db.Model):
     def __repr__(self):
         return f"<RegulationMaster ID: {self.regulation_id}, Name: {self.regulation_name}>"
 
+
 # Users Table
 class Users(db.Model):
     __tablename__ = "users"
@@ -191,4 +191,4 @@ class Users(db.Model):
     obsolete_current = db.Column(db.String(1), nullable=True)
 
     def __repr__(self):
-        return f"<Users ID: {self.user_id}, Name: {self.user_name}, Role: {self.role}>" 
+        return f"<Users ID: {self.user_id}, Name: {self.user_name}, Role: {self.role}>"
