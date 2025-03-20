@@ -186,37 +186,84 @@ const Holidays = () => {
             <p>No holidays found. Add a new holiday to get started.</p>
           </div>
         ) : (
-          <div className="holidays-table-container">
-            <table className="holidays-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Description</th>
-                  <th>Entity</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {holidays.map((holiday) => (
-                  <tr key={`${holiday.holiday_date}-${holiday.entity_id}`}>
-                    <td>{formatDate(holiday.holiday_date)}</td>
-                    <td>{holiday.description}</td>
-                    <td>{getEntityName(holiday.entity_id)}</td>
-                    <td className="actions-cell">
-                      <button
-                        className="btn-delete"
-                        onClick={() =>
-                          handleDeleteHoliday(holiday.holiday_date, holiday.entity_id)
-                        }
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="holidays-filters">
+              <div className="search-box">
+                <span className="search-icon">🔍</span>
+                <input 
+                  type="text" 
+                  placeholder="Search holidays..."
+                  className="search-input"
+                />
+              </div>
+              <div className="view-options">
+                <button className="view-btn active">
+                  <span>📅</span> Calendar
+                </button>
+                <button className="view-btn">
+                  <span>📋</span> List
+                </button>
+              </div>
+            </div>
+
+            <div className="holidays-grid">
+              {holidays.map((holiday, index) => (
+                <div 
+                  className="holiday-card" 
+                  key={`${holiday.holiday_date}-${holiday.entity_id}`}
+                  style={{"--card-index": index}}
+                >
+                  <div className="holiday-card-header">
+                    <div className="holiday-date">
+                      <div className="date-month">
+                        {new Date(holiday.holiday_date).toLocaleDateString('en-US', { month: 'short' })}
+                      </div>
+                      <div className="date-day">
+                        {new Date(holiday.holiday_date).getDate()}
+                      </div>
+                      <div className="date-year">
+                        {new Date(holiday.holiday_date).getFullYear()}
+                      </div>
+                    </div>
+                    <div className="holiday-entity">
+                      <span className="entity-badge">
+                        {getEntityName(holiday.entity_id)}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="holiday-card-content">
+                    <h3 className="holiday-title">{holiday.description}</h3>
+                    <div className="holiday-details">
+                      <span className="detail-item">
+                        <span className="icon">📍</span>
+                        {getEntityName(holiday.entity_id)}
+                      </span>
+                      <span className="detail-item">
+                        <span className="icon">📅</span>
+                        {formatDate(holiday.holiday_date)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="holiday-card-footer">
+                    <button 
+                      className="btn-edit"
+                      onClick={() => {/* Add edit functionality */}}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="btn-delete"
+                      onClick={() => handleDeleteHoliday(holiday.holiday_date, holiday.entity_id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -7,19 +7,13 @@ import "./SearchFilter.css";
 import AddRegulation from "./AddRegulation";
 import EditRegulation from "./EditRegulation";
 import DeleteRegulation from "./DeleteRegulation";
-import { FaEdit, FaSearch, FaFilter, FaCheck } from "react-icons/fa";
-
-// Add this function before the Regulations component definition
-const formatDate = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
-};
+import { FaEdit, FaTrashAlt, FaBuilding, FaGlobe, FaHome, 
+         FaFlag, FaGlobeAmericas, FaCheckCircle, FaCircle, 
+         FaFolder, FaFilter, FaList, FaExclamationTriangle, 
+         FaCheckSquare, FaSquare } from "react-icons/fa";
 
 const Regulations = () => {
   const [regulations, setRegulations] = useState([]);
-  const [allRegulations, setAllRegulations] = useState([]);
-  const [entityRegulations, setEntityRegulations] = useState([]);
   const [filteredRegulations, setFilteredRegulations] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,9 +23,7 @@ const Regulations = () => {
   const [userRole, setUserRole] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingRegulation, setEditingRegulation] = useState(null);
-  const [showManageRegulations, setShowManageRegulations] = useState(false);
-  const [selectedRegulations, setSelectedRegulations] = useState([]);
-  const [successMessage, setSuccessMessage] = useState("");
+  const [activeFilter, setActiveFilter] = useState("all");
   const navigate = useNavigate();
   
   // Search and filter states
@@ -83,8 +75,9 @@ const Regulations = () => {
         axios.get("http://localhost:5000/categories")
       ]);
       
-      const allRegulationsData = allRegulationsResponse.data.regulations || [];
-      setAllRegulations(allRegulationsData);
+      const regulationsData = regulationsResponse.data.regulations || [];
+      setRegulations(regulationsData);
+      setFilteredRegulations(regulationsData);
       setCategories(categoriesResponse.data.categories || []);
       
       // If user is Global, show all regulations
@@ -197,110 +190,40 @@ const Regulations = () => {
     }
   };
 
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
-
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters({
-      ...filters,
-      [name]: value
-    });
-  };
-
-  const resetFilters = () => {
-    setSearchTerm("");
-    setFilters({
-      categoryId: "",
-      internalExternal: "",
-      mandatoryOptional: "",
-      nationalInternational: ""
-    });
-  };
-
-  // Toggle regulation selection for entity
-  const toggleRegulationSelection = (regulationId) => {
-    setSelectedRegulations(prevSelected => {
-      if (prevSelected.includes(regulationId)) {
-        return prevSelected.filter(id => id !== regulationId);
-      } else {
-        return [...prevSelected, regulationId];
-      }
-      });
-  };
-
-  // Save selected regulations to entity_regulation table
-  const saveEntityRegulations = async () => {
-    try {
-      setLoading(true);
-      
-      if (!userEntityId) {
-        setError("Entity ID not found in user data");
-        setLoading(false);
-        return;
-      }
-      
-      // Prepare data for API call
-      const data = {
-        entity_id: userEntityId,
-        regulation_ids: selectedRegulations
-      };
-      
-      // Call API to save entity regulations
-      const response = await axios.post("http://localhost:5000/add_entity_regulations", data);
-      
-      // Update local state
-      setSuccessMessage(`Regulations successfully updated! Added: ${response.data.added}, Removed: ${response.data.removed}`);
-      
-      // Refresh data to show updated entity regulations
-      await fetchData(userEntityId, userRole);
-      
-      // Exit manage regulations mode
-      setShowManageRegulations(false);
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setSuccessMessage("");
-      }, 3000);
-      
-      setLoading(false);
-    } catch (err) {
-      console.error("Error saving entity regulations:", err);
-      setError("Failed to save entity regulations. Please try again later.");
-      setLoading(false);
-    }
-  };
-
-  // Check if a regulation is already associated with the entity
-  const isRegulationAssociated = (regulationId) => {
-    return entityRegulations.some(reg => reg.regulation_id === regulationId);
-  };
-
-  // Toggle between showing all regulations and entity regulations
-  const toggleManageRegulations = () => {
-    const newShowManageRegulations = !showManageRegulations;
-    setShowManageRegulations(newShowManageRegulations);
-    setShowAddForm(false);
-    setEditingRegulation(null);
+  // Function to handle filtering
+  const handleFilterChange = (filter) => {
+    setActiveFilter(filter);
     
-    if (newShowManageRegulations) {
-      // When entering manage mode, show all regulations
-      setRegulations(allRegulations);
-      // Initialize selected regulations with already associated ones
-      setSelectedRegulations(entityRegulations.map(reg => reg.regulation_id));
-    } else {
-      // When exiting manage mode, show only entity regulations
-      setRegulations(entityRegulations);
+    if (filter === "all") {
+      setFilteredRegulations(regulations);
+      return;
     }
     
-    // Reset filters when toggling
-    resetFilters();
-  };
-
-  // Check if user can manage regulations (only Admin users can)
-  const canManageRegulations = () => {
-    return userRole === "Admin";
+    let filtered;
+    switch(filter) {
+      case "internal":
+        filtered = regulations.filter(reg => reg.internal_external === "I");
+        break;
+      case "external":
+        filtered = regulations.filter(reg => reg.internal_external === "E");
+        break;
+      case "mandatory":
+        filtered = regulations.filter(reg => reg.mandatory_optional === "M");
+        break;
+      case "optional":
+        filtered = regulations.filter(reg => reg.mandatory_optional === "O");
+        break;
+      case "national":
+        filtered = regulations.filter(reg => reg.national_international === "N");
+        break;
+      case "international":
+        filtered = regulations.filter(reg => reg.national_international === "I");
+        break;
+      default:
+        filtered = regulations;
+    }
+    
+    setFilteredRegulations(filtered);
   };
 
   if (!user) return null;
@@ -309,50 +232,147 @@ const Regulations = () => {
     <div className={`regulations-container ${userRole === "Global" ? "global-view" : "admin-view"}`}>
       <Navbar />
       <div className="regulations-content">
-        <h1>
-          Regulations Management
-          {userRole && (
-            <span className={`role-indicator role-${userRole.toLowerCase()}`}>
-              {userRole} View
-            </span>
-          )}
-        </h1>
-        
-        <div className="regulations-role-description">
-          {userRole === "Global" 
-            ? "As a Global user, you can view all regulations across the system." 
-            : "As an Admin user, you can manage regulations for your entity."}
-        </div>
+        {/* <h1>Regulations Management</h1>
+        <p>View, add, edit, and delete regulations</p> */}
 
-        <p>
-          {userRole === "Global" 
-            ? "View all regulations in the system" 
-            : (showManageRegulations 
-              ? "Select regulations to add to your entity" 
-              : "View and manage regulations for your entity")}
-        </p>
+        {/* <div className="regulations-actions">
+          <Link to="/regulations/add" className="btn-add">
+            Add New Regulation
+          </Link>
+        </div> */}
 
-        <div className="regulations-actions">
-          {/* Only show Add New Regulation button if not in manage mode */}
-          {!showManageRegulations && (
-            <Link to="/regulations/add" className="btn-add">
-              Add New Regulation
-            </Link>
-          )}
-          
-          {/* Only show Manage Regulations button for Admin users */}
-          {canManageRegulations() && (
-            <button 
-              className="btn-manage"
-              onClick={toggleManageRegulations}
-            >
-              {showManageRegulations ? "Cancel" : "Manage Regulations"}
-            </button>
-          )}
-        </div>
+        {showAddForm ? (
+          <AddRegulation categories={categories} onRegulationAdded={fetchData} />
+        ) : editingRegulation ? (
+          <EditRegulation
+            regulation={editingRegulation}
+            categories={categories}
+            onClose={() => setEditingRegulation(null)}
+            onUpdate={fetchData}
+          />
+        ) : (
+          <>
+            <div className="filter-tabs">
+              <div 
+                className={`filter-tab ${activeFilter === "all" ? "active" : ""}`}
+                onClick={() => handleFilterChange("all")}
+              >
+                <FaList className="filter-tab-icon" /> All Regulations
+              </div>
+              <div 
+                className={`filter-tab ${activeFilter === "internal" ? "active" : ""}`}
+                onClick={() => handleFilterChange("internal")}
+              >
+                <FaHome className="filter-tab-icon" /> Internal
+              </div>
+              <div 
+                className={`filter-tab ${activeFilter === "external" ? "active" : ""}`}
+                onClick={() => handleFilterChange("external")}
+              >
+                <FaGlobe className="filter-tab-icon" /> External
+              </div>
+              <div 
+                className={`filter-tab ${activeFilter === "mandatory" ? "active" : ""}`}
+                onClick={() => handleFilterChange("mandatory")}
+              >
+                <FaCheckSquare className="filter-tab-icon" /> Mandatory
+              </div>
+              <div 
+                className={`filter-tab ${activeFilter === "optional" ? "active" : ""}`}
+                onClick={() => handleFilterChange("optional")}
+              >
+                <FaSquare className="filter-tab-icon" /> Optional
+              </div>
+              <div 
+                className={`filter-tab ${activeFilter === "national" ? "active" : ""}`}
+                onClick={() => handleFilterChange("national")}
+              >
+                <FaFlag className="filter-tab-icon" /> National
+              </div>
+              <div 
+                className={`filter-tab ${activeFilter === "international" ? "active" : ""}`}
+                onClick={() => handleFilterChange("international")}
+              >
+                <FaGlobeAmericas className="filter-tab-icon" /> International
+              </div>
 
-        {successMessage && (
-          <div className="success-message">{successMessage}</div>
+              <div className="regulations-actions">
+                <Link to="/regulations/add" className="btn-add">
+                  Add New Regulation
+                </Link>
+              </div>
+            </div>
+            
+            <div className="regulations-grid">
+              {loading ? (
+                <div className="loading">Loading regulations...</div>
+              ) : error ? (
+                <div className="error">{error}</div>
+              ) : (
+                <>
+                  {filteredRegulations.length > 0 ? (
+                    filteredRegulations.map((regulation) => (
+                      <div className="regulation-card" key={regulation.regulation_id}>
+                        <div className="card-header">
+                          <h3 className="card-title">{regulation.regulation_name}</h3>
+                          <div className="card-category">
+                            <FaFolder /> {getCategoryName(regulation.category_id)}
+                          </div>
+                        </div>
+                        
+                        <div className="card-content">
+                          <div className="card-item">
+                            <div className="card-item-icon">
+                              <FaBuilding />
+                            </div>
+                            <div className="card-item-content">
+                              <div className="card-item-label">Regulatory Body</div>
+                              <div className="card-item-value">{regulation.regulatory_body || "Not specified"}</div>
+                            </div>
+                          </div>
+                          
+                          <div className="card-badges">
+                            <span className={`card-badge ${regulation.internal_external === "I" ? "badge-internal" : "badge-external"}`}>
+                              {regulation.internal_external === "I" ? <FaHome /> : <FaGlobe />}
+                              {regulation.internal_external === "I" ? "Internal" : "External"}
+                            </span>
+                            
+                            <span className={`card-badge ${regulation.national_international === "N" ? "badge-national" : "badge-international"}`}>
+                              {regulation.national_international === "N" ? <FaFlag /> : <FaGlobeAmericas />}
+                              {regulation.national_international === "N" ? "National" : "International"}
+                            </span>
+                            
+                            <span className={`card-badge ${regulation.mandatory_optional === "M" ? "badge-mandatory" : "badge-optional"}`}>
+                              {regulation.mandatory_optional === "M" ? <FaCheckCircle /> : <FaCircle />}
+                              {regulation.mandatory_optional === "M" ? "Mandatory" : "Optional"}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="card-footer">
+                          <Link to={`/regulations/edit/${regulation.regulation_id}`} className="card-btn card-btn-edit">
+                            <FaEdit />
+                          </Link>
+                          <button
+                            className="card-btn card-btn-delete"
+                            onClick={() => handleDelete(regulation.regulation_id)}
+                          >
+                            <FaTrashAlt />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="no-results">
+                      <div className="no-results-icon"><FaExclamationTriangle /></div>
+                      <h3 className="no-results-message">No regulations found</h3>
+                      <p className="no-results-hint">Try adjusting your filter or add a new regulation</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </>
         )}
 
         {/* Search and Filter Section */}

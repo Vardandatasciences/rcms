@@ -544,7 +544,7 @@ const Tasks = () => {
               const criticality = task.criticality ? task.criticality.toLowerCase() : 'medium';
               
               return (
-                <div key={task.id} className={`task-card criticality-${criticality}-top`}>
+                <div key={task.id} className={`task-card ${statusClass}-top`}>
                   <div className="card-header">
                     <div className="header-left">
                       <div className="regulation-id">{task.regulation_id || task.regulation_name}</div>
@@ -583,7 +583,7 @@ const Tasks = () => {
                       
                       <div className="detail-item">
                         <div className="detail-label">STATUS</div>
-                        <div className="detail-content">
+                        <div className={`detail-content status-container ${statusClass}`}>
                           <div className="detail-icon">
                             <i className={`fas fa-circle status-icon ${statusClass}`}></i>
                           </div>

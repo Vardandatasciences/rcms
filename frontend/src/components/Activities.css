@@ -1,41 +1,41 @@
 :root {
-  /* Modern, professional color palette */
-  --primary-color: #2563eb;
-  --primary-light: #3b82f6;
-  --primary-dark: #1d4ed8;
-  --primary-bg: rgba(37, 99, 235, 0.05);
+  /* Updated professional color palette */
+  --primary-color: #1a56db;
+  --primary-light: #3f83f8;
+  --primary-dark: #1e429f;
+  --primary-bg: rgba(26, 86, 219, 0.05);
   
-  --success-color: #059669;
-  --success-light: #10b981;
-  --success-dark: #047857;
-  --success-bg: rgba(5, 150, 105, 0.05);
+  --success-color: #046c4e;
+  --success-light: #0e9f6e;
+  --success-dark: #03543f;
+  --success-bg: rgba(4, 108, 78, 0.05);
   
-  --warning-color: #d97706;
-  --warning-light: #f59e0b;
-  --warning-dark: #b45309;
-  --warning-bg: rgba(217, 119, 6, 0.05);
+  --warning-color: #c05621;
+  --warning-light: #dd6b20;
+  --warning-dark: #9c4221;
+  --warning-bg: rgba(192, 86, 33, 0.05);
   
-  --danger-color: #dc2626;
-  --danger-light: #ef4444;
-  --danger-dark: #b91c1c;
-  --danger-bg: rgba(220, 38, 38, 0.05);
+  --danger-color: #c81e1e;
+  --danger-light: #e53e3e;
+  --danger-dark: #9b1c1c;
+  --danger-bg: rgba(200, 30, 30, 0.05);
   
-  --info-color: #0284c7;
-  --info-light: #0ea5e9;
-  --info-dark: #0369a1;
-  --info-bg: rgba(2, 132, 199, 0.05);
+  --info-color: #065986;
+  --info-light: #0b87c9;
+  --info-dark: #044e7c;
+  --info-bg: rgba(6, 89, 134, 0.05);
   
-  /* Neutral colors */
-  --gray-50: #f8fafc;
-  --gray-100: #f1f5f9;
-  --gray-200: #e2e8f0;
-  --gray-300: #cbd5e1;
-  --gray-400: #94a3b8;
-  --gray-500: #64748b;
-  --gray-600: #475569;
-  --gray-700: #334155;
-  --gray-800: #1e293b;
-  --gray-900: #0f172a;
+  /* Updated Neutral colors - more muted */
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
   
   /* Shadows */
   --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -91,7 +91,7 @@ body {
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(to right, var(--primary-light), transparent);
+  background: linear-gradient(to right, var(--gray-300), transparent);
 }
 
 .header-title h1 {
@@ -119,14 +119,14 @@ body {
   display: flex;
   align-items: center;
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(to right, var(--primary-color), var(--primary-light));
+  background: linear-gradient(to bottom, var(--gray-600), var(--gray-700));
   color: white;
   border: none;
   border-radius: var(--border-radius-lg);
   font-weight: 600;
   text-decoration: none;
   transition: all var(--transition-fast);
-  box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.25);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   position: relative;
   overflow: hidden;
   z-index: 1;
@@ -139,7 +139,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(to right, var(--primary-dark), var(--primary-color));
+  background: var(--gray-800);
   z-index: -1;
   transition: opacity var(--transition-fast);
   opacity: 0;
@@ -562,9 +562,11 @@ body {
 }
 
 .activity-card {
-  background-color: white;
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: var(--border-radius-lg);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
   overflow: hidden;
   transition: all var(--transition-normal);
   display: flex;
@@ -573,6 +575,7 @@ body {
   height: auto;
   animation: fadeInUp 0.5s ease-out forwards;
   opacity: 0;
+  border: 1px solid rgba(204, 204, 204, 0.5);
 }
 
 @keyframes fadeInUp {
@@ -587,28 +590,41 @@ body {
 }
 
 .activity-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05), 0 3px 6px rgba(0, 0, 0, 0.02);
+  border-color: rgba(153, 153, 153, 0.6);
+  background-color: rgba(255, 255, 255, 0.85);
 }
 
-.activity-card.criticality-high {
-  border-top: 3px solid var(--danger-color);
-}
-
-.activity-card.criticality-medium {
-  border-top: 3px solid var(--warning-color);
-}
-
+.activity-card.criticality-high,
+.activity-card.criticality-medium,
 .activity-card.criticality-low {
-  border-top: 3px solid var(--success-color);
+  border-left: 4px solid var(--gray-400);
 }
 
+/* Update card header to be more transparent */
 .card-header {
   padding: 0.75rem 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--gray-100);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+  position: relative;
+  background: rgba(255, 255, 255, 0.5) !important;
+  color: var(--gray-800);
+}
+
+/* Add colored top borders based on criticality */
+.activity-card.criticality-high .card-header {
+  border-top: 3px solid var(--danger-color);
+}
+
+.activity-card.criticality-medium .card-header {
+  border-top: 3px solid var(--warning-color);
+}
+
+.activity-card.criticality-low .card-header {
+  border-top: 3px solid var(--success-color);
 }
 
 .card-id {
@@ -620,7 +636,7 @@ body {
 .regulation-id {
   font-family: 'SF Mono', 'Consolas', monospace;
   font-weight: 600;
-  color: var(--gray-800);
+  color: var(--gray-700);
   font-size: 1rem;
 }
 
@@ -634,33 +650,37 @@ body {
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.375rem 0.75rem;
+  padding: 0.35rem 0.75rem;
   border-radius: var(--border-radius-full);
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.03em;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.criticality-high {
-  background-color: rgba(220, 38, 38, 0.1);
-  color: var(--danger-color);
+.criticality-badge.criticality-high {
+  background-color: #fee2e2;
+  color: #b91c1c;
 }
 
-.criticality-medium {
-  background-color: rgba(217, 119, 6, 0.1);
-  color: var(--warning-color);
+.criticality-badge.criticality-medium {
+  background-color: #ffedd5;
+  color: #c2410c;
 }
 
-.criticality-low {
-  background-color: rgba(5, 150, 105, 0.1);
-  color: var(--success-color);
+.criticality-badge.criticality-low {
+  background-color: #d1fae5;
+  color: #065f46;
 }
 
 .card-body {
-  padding: 1rem;
+  padding: 1.25rem;
   flex: 1;
   display: flex;
   flex-direction: column;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.6);
 }
 
 .activity-title {
@@ -692,7 +712,7 @@ body {
 
 .meta-label {
   font-size: 0.75rem;
-  color: var(--gray-500);
+  color: var(--gray-600);
   font-weight: 500;
 }
 
@@ -703,11 +723,11 @@ body {
 }
 
 .meta-value.status.mandatory {
-  color: var(--primary-color);
+  color: var(--gray-800);
 }
 
 .meta-value.status.optional {
-  color: var(--gray-600);
+  color: var(--gray-700);
 }
 
 .meta-value.frequency {
@@ -715,62 +735,106 @@ body {
 }
 
 .card-actions {
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 1.25rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background-color: var(--gray-50);
-  border-top: 1px solid var(--gray-100);
+  background-color: rgba(246, 246, 246, 0.4);
+  border-top: 1px solid rgba(229, 231, 235, 0.5);
 }
 
 .btn-action {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border: none;
-  border-radius: var(--border-radius-full);
-  color: white;
+  border-radius: var(--border-radius-md);
+  background-color: transparent;
+  color: var(--gray-700);
   cursor: pointer;
   transition: all var(--transition-fast);
   text-decoration: none;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
 }
 
 .btn-action:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
+  color: var(--gray-900);
 }
 
+/* Specific icon styling */
 .btn-edit {
-  background-color: var(--primary-color);
+  color: #404757;
+}
+
+.btn-edit:hover {
+  color: #2c323e;
 }
 
 .btn-delete {
-  background-color: var(--danger-color);
+  color: #d32f2f;
 }
 
-.btn-assign {
-  background-color: var(--success-color);
+.btn-delete:hover {
+  color: #b71c1c;
+}
+
+/* Make icons larger and more visible */
+.list-cell svg,
+.list-actions svg,
+.btn-action svg {
+  width: 22px !important;
+  height: 22px !important;
+  fill: currentColor;
+  color: currentColor;
+  stroke-width: 0;
+  filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+/* Fix the assign button styling */
+.btn-text-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #0d6c56 !important;
+  color: white !important;
+  font-weight: 600;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.btn-text-action svg {
+  margin-right: 5px;
 }
 
 /* List View */
 .activities-list {
-  background-color: white;
-  border-radius: var(--border-radius-xl);
-  box-shadow: var(--shadow-md);
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(204, 204, 204, 0.5);
+  border-radius: var(--border-radius-lg);
   overflow: hidden;
   margin-bottom: 2rem;
   animation: fadeInUp 0.5s ease-out;
+  max-height: 80vh;
+  overflow: visible;
 }
 
 .list-header {
   display: grid;
   grid-template-columns: 1fr 0.5fr 2fr 1fr 1fr 0.8fr 1fr;
   padding: 1rem 1.5rem;
-  background-color: var(--gray-50);
-  border-bottom: 1px solid var(--gray-200);
+  background-color: rgba(255, 255, 255, 0.5) !important;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
   font-weight: 600;
   color: var(--gray-700);
 }
@@ -791,13 +855,13 @@ body {
 }
 
 .sort-icon {
-  font-size: 0.75rem;
-  color: var(--gray-400);
+  font-size: 0.875rem;
+  color: var(--gray-600);
   transition: all var(--transition-fast);
 }
 
 .sort-icon.active {
-  color: var(--primary-color);
+  color: var(--gray-800);
 }
 
 .list-header .list-cell:hover .sort-icon {
@@ -805,34 +869,41 @@ body {
 }
 
 .list-body {
-  max-height: 600px;
+  max-height: 70vh; /* Increased from 600px */
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-400) var(--gray-100);
 }
 
 .list-row {
   display: grid;
   grid-template-columns: 1fr 0.5fr 2fr 1fr 1fr 0.8fr 1fr;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--gray-100);
+  border-bottom: 1px solid rgba(243, 244, 246, 0.5);
   transition: all var(--transition-fast);
   animation: fadeIn 0.5s ease-out forwards;
   opacity: 0;
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .list-row:hover {
-  background-color: var(--gray-50);
+  background-color: rgba(249, 250, 251, 0.4) !important;
+  box-shadow: inset 0 0 0 1px rgba(229, 231, 235, 0.5);
 }
 
 .list-row.criticality-high {
-  border-left: 3px solid var(--danger-color);
+  border-left: 4px solid var(--danger-color);
+  background-color: rgba(220, 38, 38, 0.01) !important;
 }
 
 .list-row.criticality-medium {
-  border-left: 3px solid var(--warning-color);
+  border-left: 4px solid var(--warning-color);
+  background-color: rgba(217, 119, 6, 0.01) !important;
 }
 
 .list-row.criticality-low {
-  border-left: 3px solid var(--success-color);
+  border-left: 4px solid var(--success-color);
+  background-color: rgba(5, 150, 105, 0.01) !important;
 }
 
 .status-badge {
@@ -842,21 +913,24 @@ body {
   border-radius: var(--border-radius-full);
   font-size: 0.75rem;
   font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .status-badge.mandatory {
-  background-color: var(--primary-bg);
-  color: var(--primary-color);
+  background-color: #e8f0fd;
+  color: #2c5282;
 }
 
 .status-badge.optional {
-  background-color: var(--gray-100);
-  color: var(--gray-600);
+  background-color: #edf2f7;
+  color: #4a5568;
 }
 
 .list-actions {
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: flex-end;
 }
 
 /* Footer */
@@ -963,9 +1037,11 @@ body {
   display: flex;
   align-items: center;
   padding: 1rem;
-  background-color: white;
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
   position: relative;
   cursor: pointer;
   transition: all var(--transition-normal);
@@ -974,11 +1050,13 @@ body {
   opacity: 0;
   height: auto;
   min-height: 60px; /* Optional: Ensure it doesn't get too small */
+  border: 1px solid rgba(204, 204, 204, 0.5);
 }
 
 .stat-card:hover {
   transform: translateY(-5px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05), 0 3px 6px rgba(0, 0, 0, 0.02);
+  background-color: rgba(255, 255, 255, 0.85);
 }
 
 .stat-card.active {
@@ -1211,9 +1289,9 @@ body {
 /* Assign button styled as text */
 .btn-text-action {
   padding: 0.5rem 1rem;
-  background-color: var(--success-bg);
-  color: var(--success-color);
-  border: 1px solid var(--success-color);
+  background-color: var(--gray-200);
+  color: var(--gray-700);
+  border: 1px solid var(--gray-300);
   border-radius: var(--border-radius-md);
   font-weight: 600;
   font-size: 0.875rem;
@@ -1223,9 +1301,8 @@ body {
 }
 
 .btn-text-action:hover {
-  background-color: var(--success-color);
-  color: white;
-  transform: translateY(-2px);
+  background-color: var(--gray-300);
+  color: var(--gray-800);
 }
 
 .list-btn-text {
@@ -1239,8 +1316,8 @@ body {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background-color: var(--gray-50);
-  border-top: 1px solid var(--gray-100);
+  background-color: rgba(246, 246, 246, 0.4);
+  border-top: 1px solid rgba(229, 231, 235, 0.5);
 }
 
 /* Responsive styles for statistics cards */
@@ -1277,4 +1354,365 @@ body {
     grid-template-columns: 1fr;
   }
 }
-  
+
+/* Update the top blue headers on activity cards */
+.card-id + .criticality-badge {
+  background-color: var(--gray-200);
+  color: var(--gray-700);
+}
+
+/* Update the blue colored activity headers (EPF, EX1001, GOODS) */
+div[class^="EX1001"], div[class^="EPF"], div[class^="GOODS"] {
+  background: linear-gradient(to right, var(--gray-600), var(--gray-500));
+  color: white;
+}
+
+/* Directly target the blue headers in activities list */
+.activities-grid > div > div:first-child,
+.activities-list > div > div:first-child {
+  background: linear-gradient(to bottom, var(--gray-500), var(--gray-600));
+  color: white;
+}
+
+/* Target the specific blue headers shown in the screenshot */
+[class*="criticality-high"] .card-header:first-of-type,
+[class*="criticality-medium"] .card-header:first-of-type,
+[class*="criticality-low"] .card-header:first-of-type {
+  background: linear-gradient(to bottom, var(--gray-300), var(--gray-200));
+}
+
+/* Important override for the blue headers at the top of each card */
+.activity-card > div:first-child {
+  background: linear-gradient(to bottom, var(--gray-300), var(--gray-100)) !important;
+}
+
+/* Target each blue header from the screenshot using more specific selectors */
+div[class*="HIGH"],
+div[class*="MEDIUM"] {
+  background: linear-gradient(to right, var(--gray-600), var(--gray-500)) !important;
+  color: white !important;
+}
+
+/* Target the blue buttons in the action section */
+.btn-action.btn-edit {
+  background-color: var(--gray-600);
+}
+
+.btn-action.btn-edit:hover {
+  background-color: var(--gray-700);
+}
+
+/* This is a critical override to target those specific blue headers */
+.activities-grid > div,
+.activities-list > div {
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+}
+
+/* Direct targeting of the blue headers with HIGH indicator */
+[class*="HIGH"],
+[class*="MEDIUM"],
+[class*="EPF"],
+[class*="EX1001"],
+[class*="GOODS"] {
+  background: linear-gradient(to right, var(--gray-600), var(--gray-500)) !important;
+  color: white !important;
+}
+
+/* Target the blue header bars in activities very specifically */
+.activities-container .card-header {
+  background: white !important;
+  color: var(--gray-800) !important;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.activities-container .custom-header {
+  background: white !important;
+  color: var(--gray-800) !important;
+}
+
+/* Reset any conflicting styles from other components */
+.activities-container [class*="HIGH"],
+.activities-container [class*="MEDIUM"],
+.activities-container [class*="EPF"],
+.activities-container [class*="EX1001"],
+.activities-container [class*="GOODS"] {
+  background: white !important;
+  color: var(--gray-800) !important;
+  border-radius: 4px 4px 0 0;
+}
+
+/* For blue badges */
+.activities-container .gray-badge {
+  background-color: var(--gray-200) !important;
+  color: var(--gray-700) !important;
+}
+
+/* Make activity cards distinctive */
+.activities-container .activity-card {
+  border: 1px solid #CCCCCC;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.activities-container .activity-card:hover {
+  border-color: #999999;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.activities-container .activity-card .card-actions {
+  background-color: #F6F6F6;
+}
+
+/* Fix any remaining blue elements */
+.activities-container .btn-refresh {
+  background-color: rgba(110, 110, 110, 0.1);
+  color: #505050;
+}
+
+.activities-container .btn-refresh:hover {
+  background-color: #6E6E6E;
+  color: white;
+}
+
+.activities-container .status-badge.mandatory {
+  background-color: rgba(110, 110, 110, 0.1);
+  color: #505050;
+}
+
+/* Fix active button states */
+.activities-container .view-btn.active {
+  background-color: white;
+  color: #505050;
+}
+
+/* Override any remaining blue styles */
+.activities-container .meta-value.status.mandatory {
+  color: #505050;
+}
+
+/* Fix for the top blue headers in each card */
+.activities-container .activities-grid > div > div:first-child {
+  background: white !important;
+  color: var(--gray-800) !important;
+}
+
+/* Fix sort icon colors */
+.activities-container .sort-icon.active,
+.activities-container .list-header .list-cell:hover .sort-icon,
+.activities-container .list-header .list-cell:hover {
+  color: #505050;
+}
+
+/* Extremely specific overrides to handle any remaining conflicts */
+.activities-container div[class*="EX1001"]:not(.activities-container *),
+.activities-container div[class*="EPF"]:not(.activities-container *),
+.activities-container div[class*="GOODS"]:not(.activities-container *) {
+  background: white !important;
+  color: var(--gray-800) !important;
+}
+
+/* Target the specific blue headers in the image */
+body .activities-container div[id^="EX"],
+body .activities-container div[id^="EPF"],
+body .activities-container div[id^="GOODS"] {
+  background: white !important;
+  color: var(--gray-800) !important;
+}
+
+/* Additional direct targeting for the blue headers */
+body .activities-container div[class*="HIGH"],
+body .activities-container div[class*="MEDIUM"] {
+  background: white !important;
+  color: var(--gray-800) !important;
+}
+
+/* Inline style overrides if needed */
+.activities-container [style*="background"] {
+  background: white !important;
+}
+
+/* Keep the dark headers for list view but make them more professional */
+.activities-list > div > div:first-child,
+.list-header {
+  background: white !important;
+  color: var(--gray-700) !important;
+  font-weight: 600;
+  border-bottom: 1px solid var(--gray-300);
+  padding: 0.75rem 1rem;
+}
+
+/* Add distinct background colors to list rows based on criticality */
+.list-row.criticality-high {
+  border-left: 4px solid var(--danger-color);
+  background-color: rgba(220, 38, 38, 0.02);
+}
+
+.list-row.criticality-medium {
+  border-left: 4px solid var(--warning-color);
+  background-color: rgba(217, 119, 6, 0.02);
+}
+
+.list-row.criticality-low {
+  border-left: 4px solid var(--success-color);
+  background-color: rgba(5, 150, 105, 0.02);
+}
+
+/* Enhanced hover effect on list rows */
+.list-row:hover {
+  background-color: var(--gray-50) !important;
+  box-shadow: inset 0 0 0 1px var(--gray-200);
+}
+
+/* Make sure list row colors don't get overridden */
+.activities-container .list-row.criticality-high {
+  background-color: rgba(220, 38, 38, 0.01) !important;
+}
+
+.activities-container .list-row.criticality-medium {
+  background-color: rgba(217, 119, 6, 0.01) !important;
+}
+
+.activities-container .list-row.criticality-low {
+  background-color: rgba(5, 150, 105, 0.01) !important;
+}
+
+/* Override for list headers to ensure they remain professional */
+.activities-container .list-header,
+.activities-container [id="Regulation ID"],
+.activities-container [id^="EPF"]:first-child,
+.activities-container [id^="EX1001"]:first-child {
+  background: white !important;
+  color: var(--gray-700) !important;
+}
+
+/* Add scrolling for list view */
+.list-body {
+  max-height: 600px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  /* scrollbar-color: var(--gray-400) var(--gray-100); */
+}
+
+/* Scrollbar styling for WebKit browsers (Chrome, Safari) */
+.list-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.list-body::-webkit-scrollbar-track {
+  /* background: var(--gray-100); */
+  border-radius: 3px;
+}
+
+.list-body::-webkit-scrollbar-thumb {
+  /* background-color: var(--gray-400); */
+  border-radius: 3px;
+}
+
+/* Make list view container have proper borders and shadows */
+.activities-list {
+  border: 1px solid var(--gray-300);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+/* Ensure alternating rows have subtle distinction */
+.list-row:nth-child(even) {
+  background-color: var(--gray-50);
+}
+
+/* Update first row to have plain background */
+.list-row:first-child {
+  background-color: white !important;
+}
+
+/* Improve icon visibility in the list view */
+.list-cell svg,
+.list-actions svg,
+.btn-action svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+  color: currentColor;
+  stroke-width: 0;
+  filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, 0.2));
+}
+
+/* Fix the red content areas from the cards */
+.activity-card > div:nth-child(2) {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  color: var(--gray-800) !important;
+}
+
+/* Specific color overrides for the red/orange background content areas */
+[class*="EPF"] > div:nth-child(2),
+[class*="EX1001"] > div:nth-child(2),
+[class*="GOODS"] > div:nth-child(2) {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  color: var(--gray-800) !important;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.6);
+}
+
+/* Make the background extremely light for the colored content areas */
+.activity-card .card-body[style*="background"] {
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Target the specific red backgrounds in the middle section */
+.activity-title + div {
+  background-color: transparent !important;
+}
+
+/* Override for the card title area with red backgrounds */
+.activity-card > div:nth-child(2) {
+  background: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Fix the colored backgrounds (red, orange) in the content sections */
+.activity-card[style*="background"],
+.activity-title[style*="background"],
+.activity-meta[style*="background"] {
+  background: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Target all red/orange colored sections - very broad but necessary */
+[style*="background-color: rgb(220"],
+[style*="background-color: rgb(217"],
+[style*="background-color: rgb(226"] {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Add specific targeting for the colored sections shown in your screenshot */
+[style*="#d97706"],
+[style*="#dc2626"],
+[style*="#16a34a"],
+[style*="#e25949"] {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  color: var(--gray-800) !important;
+}
+
+/* Set specific styling for labels and values */
+.meta-label {
+  color: var(--gray-600);
+}
+
+.meta-value {
+  color: var(--gray-800);
+}
+
+/* Fix the status badges to look better */
+.status-badge {
+  background-color: rgba(237, 242, 247, 0.8);
+  color: var(--gray-700);
+}
+
+/* Make the assign button more visible against the lighter backgrounds */
+.btn-text-action {
+  background-color: #0d6c56 !important;
+  color: white !important;
+  border: none;
+}
+
+.btn-text-action:hover {
+  background-color: #065f46 !important;
+}

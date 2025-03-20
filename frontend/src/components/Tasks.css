@@ -1011,17 +1011,22 @@ body {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* Criticality top borders */
-.task-card.criticality-high-top {
-  border-top: 3px solid var(--danger-color);
+/* Change top border colors based on status */
+.task-card.status-completed-top {
+  border-top: 4px solid var(--success-color);
 }
 
-.task-card.criticality-medium-top {
-  border-top: 3px solid var(--warning-color);
+.task-card.status-in-progress-top {
+  border-top: 4px solid var(--warning-color);
 }
 
-.task-card.criticality-low-top {
-  border-top: 3px solid var(--success-color);
+/* Change 'Yet to Start' status to use red border */
+.task-card.status-pending-top {
+  border-top: 4px solid var(--danger-color);
+}
+
+.task-card.status-overdue-top {
+  border-top: 4px solid var(--danger-color);
 }
 
 /* Card header styling to match the image */
@@ -1031,7 +1036,7 @@ body {
   justify-content: space-between;
   align-items: flex-start;
   border-bottom: 1px solid var(--gray-200);
-  background-color: var(--gray-50);
+  background-color: white;
 }
 
 .header-left {
@@ -1062,7 +1067,7 @@ body {
   font-size: 0.75rem;
 }
 
-/* Badge styling to match image */
+/* Enhanced background colors for criticality badges */
 .criticality-badge {
   display: inline-flex;
   align-items: center;
@@ -1070,33 +1075,61 @@ body {
   padding: 0.15rem 0.5rem;
   border-radius: 0.25rem;
   font-size: 0.65rem;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
-  background-color: rgba(217, 119, 6, 0.1);
 }
 
 .criticality-high {
-  background-color: rgba(220, 38, 38, 0.1);
-  color: var(--danger-color);
+  background-color: var(--danger-color) !important;
+  color: white !important;
 }
 
 .criticality-medium {
-  background-color: rgba(217, 119, 6, 0.1);
-  color: var(--warning-color);
+  background-color: var(--warning-color) !important;
+  color: white !important;
 }
 
 .criticality-low {
-  background-color: rgba(5, 150, 105, 0.1);
-  color: var(--success-color);
+  background-color: var(--success-color) !important;
+  color: white !important;
 }
 
-/* Delayed badge - purple background with white text as per image */
+/* Override previous badge styling that might conflict */
+.tasks-container .criticality-badge {
+  background-color: inherit !important;
+  color: inherit !important;
+}
+
+/* Add background color to status in the detail section */
+.detail-content.status-container {
+  background-color: var(--gray-50);
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+}
+
+.detail-content.status-container.status-completed {
+  background-color: var(--success-bg);
+}
+
+.detail-content.status-container.status-in-progress {
+  background-color: var(--warning-bg);
+}
+
+.detail-content.status-container.status-pending {
+  background-color: var(--info-bg);
+}
+
+.detail-content.status-container.status-overdue {
+  background-color: var(--danger-bg);
+}
+
+/* Change delayed badge to red */
 .delayed-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0.15rem 0.5rem;
-  background-color: #6b21a8;
+  background-color: var(--danger-color);
   color: white;
   font-size: 0.65rem;
   font-weight: 500;
@@ -1104,24 +1137,27 @@ body {
   text-transform: uppercase;
 }
 
-/* Reassign button to match the image */
+/* Make reassign button more prominent */
 .btn-reassign-action-top {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.25rem 0.65rem;
+  padding: 0.45rem 0.95rem;
   background-color: var(--primary-color);
   color: white;
   border: none;
   border-radius: 0.25rem;
-  font-size: 0.65rem;
-  font-weight: 500;
+  font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-reassign-action-top:hover {
   background-color: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-reassign-action-top.btn-disabled {
@@ -1319,12 +1355,6 @@ body {
   background-color: rgba(220, 38, 38, 0.1);
 }
 
-/* Make sure delayed date text is red in list view too */
-.tasks-table td.delayed-text {
-  color: var(--danger-color) !important;
-  font-weight: 600;
-}
-
 /* Override the existing table row status styles that might conflict */
 .tasks-table tr.status-completed,
 .tasks-table tr.status-in-progress,
@@ -1332,4 +1362,58 @@ body {
 .tasks-table tr.status-overdue {
   border-left: none;
   background-color: transparent;
+}
+
+/* Make task card headers distinct with warm colors */
+.tasks-container .card-header {
+  background: white !important;
+  color: var(--gray-800) !important;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+/* Ensure consistent badge styling */
+.tasks-container .criticality-badge {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  color: var(--gray-700) !important;
+}
+
+/* Fix button colors */
+.tasks-container .btn-add {
+  background: linear-gradient(to right, #B06E45, #8A5A38) !important;
+}
+
+.tasks-container .btn-add::before {
+  background: #7A4E30 !important;
+}
+
+/* Fix hover states */
+.tasks-container .filter-button:hover, 
+.tasks-container .filter-button.active {
+  border-color: #B06E45;
+  color: #B06E45;
+  background-color: rgba(176, 110, 69, 0.05);
+}
+
+.tasks-container .view-btn.active {
+  color: #B06E45;
+}
+
+/* Fix table header hover */
+.tasks-container .tasks-table th:hover {
+  color: #B06E45;
+}
+
+/* Fix task card actions */
+.tasks-container .btn-reassign-action-top:hover {
+  background-color: #B06E45;
+}
+
+/* Fix refresh button */
+.tasks-container .btn-refresh {
+  background-color: rgba(176, 110, 69, 0.1);
+  color: #B06E45;
+}
+
+.tasks-container .btn-refresh:hover {
+  background-color: #B06E45;
 }

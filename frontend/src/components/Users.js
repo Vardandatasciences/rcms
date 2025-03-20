@@ -3,8 +3,13 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 import "./Users.css"; // Import CSS for styling
-import "./SearchFilter.css"; // Import search and filter styles
-import { FaSearch, FaFilter } from "react-icons/fa"; // Import icons
+// Add FontAwesome for icons
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faUserPlus, faEdit, faTrash, faEnvelope, faIdCard, 
+  faBuilding, faUserTag, faUserEdit, faSave, faTimes,
+  faSpinner 
+} from '@fortawesome/free-solid-svg-icons';
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -296,7 +301,11 @@ const Users = () => {
 
         <div className="users-actions">
           <button className="btn-add-user" onClick={toggleAddForm}>
-            {showAddForm ? "Cancel" : "Add New User"}
+            {showAddForm ? (
+              <><FontAwesomeIcon icon={faTimes} /> Cancel</>
+            ) : (
+              <><FontAwesomeIcon icon={faUserPlus} /> Add New User</>
+            )}
           </button>
         </div>
 
@@ -310,7 +319,7 @@ const Users = () => {
 
         {showAddForm && (
           <div className="user-form-container">
-            <h2>Add New User</h2>
+            <h2><FontAwesomeIcon icon={faUserPlus} /> Add New User</h2>
             <form onSubmit={handleAddUser}>
               <div className="form-grid">
                 <div className="form-group">
@@ -434,10 +443,10 @@ const Users = () => {
 
               <div className="form-actions">
                 <button type="submit" className="btn-submit">
-                  Save User
+                  <FontAwesomeIcon icon={faSave} /> Save User
                 </button>
                 <button type="button" className="btn-cancel" onClick={toggleAddForm}>
-                  Cancel
+                  <FontAwesomeIcon icon={faTimes} /> Cancel
                 </button>
               </div>
             </form>
@@ -446,7 +455,7 @@ const Users = () => {
 
         {showEditForm && currentUser && (
           <div className="user-form-container">
-            <h2>Edit User</h2>
+            <h2><FontAwesomeIcon icon={faUserEdit} /> Edit User</h2>
             <form onSubmit={handleUpdateUser}>
               <div className="form-grid">
                 <div className="form-group">
@@ -555,10 +564,10 @@ const Users = () => {
 
               <div className="form-actions">
                 <button type="submit" className="btn-submit">
-                  Update User
+                  <FontAwesomeIcon icon={faSave} /> Update User
                 </button>
                 <button type="button" className="btn-cancel" onClick={cancelEdit}>
-                  Cancel
+                  <FontAwesomeIcon icon={faTimes} /> Cancel
                 </button>
               </div>
             </form>
@@ -628,7 +637,10 @@ const Users = () => {
             )}
 
             {loading ? (
-              <div className="loading">Loading users...</div>
+              <div className="loading">
+                <FontAwesomeIcon icon={faSpinner} className="spinner" />
+                <p>Loading users...</p>
+              </div>
             ) : error ? (
               <div className="error-message">{error}</div>
             ) : filteredUsers.length === 0 ? (
@@ -638,51 +650,60 @@ const Users = () => {
                   "No users match your search criteria."}
               </div>
             ) : (
-              <div className="users-table-container">
-                <div className="results-count">
-                  Showing {filteredUsers.length} of {users.length} users
-                </div>
-                <table className="users-table">
-          <thead>
-            <tr>
-              <th>User ID</th>
-                      <th>Name</th>
-                      <th>Entity</th>
-              <th>Address</th>
-              <th>Mobile No</th>
-                      <th>Email</th>
-              <th>Role</th>
-                      <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-                    {filteredUsers.map((user) => (
-              <tr key={user.user_id}>
-                <td>{user.user_id}</td>
-                        <td>{user.user_name}</td>
-                <td>{user.entity_name}</td>
-                        <td>{user.address}</td>
-                <td>{user.mobile_no}</td>
-                <td>{user.email_id}</td>
-                <td>{user.role}</td>
-                        <td className="actions-cell">
-                          <button
-                            className="btn-edit"
-                            onClick={() => handleEditUser(user)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="btn-delete"
-                            onClick={() => handleDeleteUser(user.user_id)}
-                          >
-                            Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              <div className="user-cards-container">
+                {users.map((user, index) => (
+                  <div 
+                    className="user-card" 
+                    key={user.user_id} 
+                    style={{"--index": index}}
+                  >
+                    <div className="user-card-header">
+                      <div className="user-avatar">
+                        {user.user_name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="user-name-role">
+                        <h3>{user.user_name}</h3>
+                        <span className={`user-role ${user.role.toLowerCase()}`}>
+                          <FontAwesomeIcon icon={faUserTag} /> {user.role}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="user-card-body">
+                      <div className="user-info">
+                        <p>
+                          <FontAwesomeIcon icon={faIdCard} />
+                          <span className="info-label">ID:</span> {user.user_id}
+                        </p>
+                        <p>
+                          <FontAwesomeIcon icon={faBuilding} /> 
+                          <span className="info-label">Entity:</span> {user.entity_name}
+                        </p>
+                        <p>
+                          <FontAwesomeIcon icon={faEnvelope} /> 
+                          <span className="info-label">Email:</span> {user.email_id}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="user-card-actions">
+                      <button
+                        className="btn-edit"
+                        onClick={() => handleEditUser(user)}
+                        title="Edit user"
+                      >
+                        <FontAwesomeIcon icon={faEdit} />
+                      </button>
+                      <button
+                        className="btn-delete"
+                        onClick={() => handleDeleteUser(user.user_id)}
+                        title="Delete user"
+                      >
+                        <FontAwesomeIcon icon={faTrash} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </>
