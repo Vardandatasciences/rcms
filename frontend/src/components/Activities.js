@@ -495,12 +495,12 @@ const Activities = () => {
                 key={`${activity.regulation_id}-${activity.activity_id}`} 
                 className={`activity-card ${getCriticalityClass(activity.criticality)}`}
               >
-                <div className="card-header">
+                <div className="card-header custom-header">
                   <div className="card-id">
                     <span className="regulation-id">{activity.regulation_id}</span>
                     <span className="activity-id">#{activity.activity_id}</span>
                   </div>
-                  <div className="criticality-badge">
+                  <div className="criticality-badge gray-badge">
                     {getCriticalityIcon(activity.criticality)}
                     {activity.criticality}
                   </div>
@@ -615,19 +615,20 @@ const Activities = () => {
                         className="btn-action btn-edit"
                         title="Edit activity"
                       >
-                        <FaEdit />
+                        <FaEdit size={16} />
                       </Link>
                       <button
                         className="btn-action btn-delete"
                         onClick={() => deleteActivity(activity.regulation_id, activity.activity_id)}
                         title="Delete activity"
                       >
-                        <FaTrashAlt />
+                        <FaTrashAlt size={16} />
                       </button>
                       <button
                         className="btn-text-action list-btn-text"
                         onClick={() => handleAssign(activity.regulation_id, activity.activity_id)}
                       >
+                        <FaUserCog style={{ marginRight: '5px' }} />
                         Assign
                       </button>
                     </div>

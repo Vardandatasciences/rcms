@@ -1,32 +1,50 @@
 /* Add CSS variables like in Categories.css */
 :root {
-  /* Color palette */
-  --primary-color: #4f46e5;
-  --primary-light: #6366f1;
-  --primary-dark: #4338ca;
-  --primary-bg: rgba(79, 70, 229, 0.05);
+  /* Main color themes */
+  --teal-primary: #2dd4bf;         /* Vibrant teal */
+  --teal-light: #5eead4;           /* Light teal */
+  --teal-dark: #0d9488;            /* Dark teal */
+  --teal-bg: rgba(45, 212, 191, 0.05);
   
-  --warning-color: #d97706;
-  --warning-light: #f59e0b;
-  --warning-dark: #b45309;
-  --warning-bg: rgba(217, 119, 6, 0.05);
+  --purple-primary: #a855f7;       /* Vibrant purple */
+  --purple-light: #c084fc;         /* Light purple */
+  --purple-dark: #9333ea;          /* Dark purple */
+  --purple-bg: rgba(168, 85, 247, 0.05);
   
-  --danger-color: #dc2626;
-  --danger-light: #ef4444;
-  --danger-dark: #b91c1c;
-  --danger-bg: rgba(220, 38, 38, 0.05);
+  --blue-primary: #3b82f6;         /* Vibrant blue */
+  --blue-light: #60a5fa;           /* Light blue */
+  --blue-dark: #2563eb;            /* Dark blue */
+  --blue-bg: rgba(59, 130, 246, 0.05);
   
-  /* Neutral colors */
-  --gray-50: #f8fafc;
-  --gray-100: #f1f5f9;
-  --gray-200: #e2e8f0;
-  --gray-300: #cbd5e1;
-  --gray-400: #94a3b8;
-  --gray-500: #64748b;
-  --gray-600: #475569;
-  --gray-700: #334155;
-  --gray-800: #1e293b;
-  --gray-900: #0f172a;
+  --orange-primary: #f97316;       /* Vibrant orange */
+  --orange-light: #fb923c;         /* Light orange */
+  --orange-dark: #ea580c;          /* Dark orange */
+  --orange-bg: rgba(249, 115, 22, 0.05);
+  
+  --pink-primary: #ec4899;         /* Vibrant pink */
+  --pink-light: #f472b6;           /* Light pink */
+  --pink-dark: #db2777;            /* Dark pink */
+  --pink-bg: rgba(236, 72, 153, 0.05);
+  
+  /* Accent colors */
+  --success-color: #10b981;        /* Green */
+  --success-light: #34d399;
+  --warning-color: #f59e0b;        /* Amber */
+  --warning-light: #fbbf24;
+  --danger-color: #ef4444;         /* Red */
+  --danger-light: #f87171;
+  
+  /* Neutral colors - more sophisticated grays */
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
   
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
@@ -43,32 +61,26 @@
 
 .users-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, var(--gray-50) 0%, #e4efe9 100%);
+  background: linear-gradient(135deg, var(--gray-50) 0%, #e8f4f3 100%);
   position: relative;
   overflow: hidden;
 }
 
-/* Add floating background icons like in Holidays */
+/* Add a colorful gradient overlay to the background */
 .users-container::before {
-  content: '👥';
+  content: '';
   position: fixed;
-  font-size: 200px;
-  opacity: 0.02;
-  right: -50px;
-  top: 10%;
-  transform: rotate(15deg);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(circle at 10% 10%, rgba(45, 212, 191, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 90% 20%, rgba(168, 85, 247, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 20% 80%, rgba(249, 115, 22, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 70% 90%, rgba(236, 72, 153, 0.05) 0%, transparent 50%);
   z-index: 0;
-}
-
-.users-container::after {
-  content: '🏢';
-  position: fixed;
-  font-size: 180px;
-  opacity: 0.02;
-  left: -30px;
-  bottom: 10%;
-  transform: rotate(-10deg);
-  z-index: 0;
+  pointer-events: none;
 }
 
 .users-content {
@@ -131,7 +143,7 @@
 }
 
 .btn-add-user {
-  background: linear-gradient(to right, var(--primary-color), var(--primary-light));
+  background: linear-gradient(to right, var(--teal-primary), var(--teal-light));
   color: white;
   padding: 0.75rem 1.5rem;
   border: none;
@@ -140,7 +152,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-normal);
-  box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.25);
+  box-shadow: 0 4px 14px 0 rgba(45, 212, 191, 0.25);
   position: relative;
   overflow: hidden;
   z-index: 1;
@@ -150,25 +162,12 @@
 }
 
 .btn-add-user::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(to right, var(--primary-dark), var(--primary-color));
-  z-index: -1;
-  transition: opacity var(--transition-fast);
-  opacity: 0;
+  background: linear-gradient(to right, var(--teal-dark), var(--teal-primary));
 }
 
 .btn-add-user:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px 0 rgba(79, 70, 229, 0.35);
-}
-
-.btn-add-user:hover::before {
-  opacity: 1;
+  box-shadow: 0 6px 20px 0 rgba(45, 212, 191, 0.35);
 }
 
 /* New enhanced user cards styling with PowerPoint-like staggered animations */
@@ -188,7 +187,7 @@
   animation: cardPopIn 0.6s ease-out forwards;
   opacity: 0;
   animation-delay: calc(0.1s * var(--index));
-  border: 1px solid rgba(79, 70, 229, 0.1);
+  border: 1px solid rgba(209, 213, 219, 0.5);
 }
 
 @keyframes cardPopIn {
@@ -202,52 +201,132 @@
   }
 }
 
-.user-card:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--shadow-xl);
-  border-color: var(--primary-light);
+/* Create alternating card header colors based on index */
+.user-card:nth-child(5n+1) .user-card-header {
+  background: linear-gradient(135deg, var(--teal-light) 0%, var(--teal-dark) 100%);
 }
 
-/* Add shine effect on hover */
-.user-card::before {
-  content: '';
-  position: absolute;
-  top: -100%;
-  left: -100%;
-  width: 300%;
-  height: 300%;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0) 40%,
-    rgba(255, 255, 255, 0.6) 50%,
-    rgba(255, 255, 255, 0) 60%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  transform: rotate(45deg);
-  transition: all 1.5s;
-  z-index: 1;
-  pointer-events: none;
+.user-card:nth-child(5n+2) .user-card-header {
+  background: linear-gradient(135deg, var(--purple-light) 0%, var(--purple-dark) 100%);
 }
 
-.user-card:hover::before {
-  animation: shine 1.5s;
+.user-card:nth-child(5n+3) .user-card-header {
+  background: linear-gradient(135deg, var(--blue-light) 0%, var(--blue-dark) 100%);
 }
 
-@keyframes shine {
-  0% {
-    top: -100%;
-    left: -100%;
-  }
-  100% {
-    top: 100%;
-    left: 100%;
-  }
+.user-card:nth-child(5n+4) .user-card-header {
+  background: linear-gradient(135deg, var(--orange-light) 0%, var(--orange-dark) 100%);
+}
+
+.user-card:nth-child(5n+5) .user-card-header {
+  background: linear-gradient(135deg, var(--pink-light) 0%, var(--pink-dark) 100%);
+}
+
+/* Match border color to header */
+.user-card:nth-child(5n+1):hover {
+  border-color: var(--teal-primary);
+}
+
+.user-card:nth-child(5n+2):hover {
+  border-color: var(--purple-primary);
+}
+
+.user-card:nth-child(5n+3):hover {
+  border-color: var(--blue-primary);
+}
+
+.user-card:nth-child(5n+4):hover {
+  border-color: var(--orange-primary);
+}
+
+.user-card:nth-child(5n+5):hover {
+  border-color: var(--pink-primary);
+}
+
+/* Match icon colors to card theme */
+.user-card:nth-child(5n+1) .user-info p svg {
+  color: var(--teal-primary);
+}
+
+.user-card:nth-child(5n+2) .user-info p svg {
+  color: var(--purple-primary);
+}
+
+.user-card:nth-child(5n+3) .user-info p svg {
+  color: var(--blue-primary);
+}
+
+.user-card:nth-child(5n+4) .user-info p svg {
+  color: var(--orange-primary);
+}
+
+.user-card:nth-child(5n+5) .user-info p svg {
+  color: var(--pink-primary);
+}
+
+/* Match border-left hover color to card theme */
+.user-card:nth-child(5n+1) .user-info p:hover {
+  border-left-color: var(--teal-primary);
+  background-color: var(--teal-bg);
+}
+
+.user-card:nth-child(5n+2) .user-info p:hover {
+  border-left-color: var(--purple-primary);
+  background-color: var(--purple-bg);
+}
+
+.user-card:nth-child(5n+3) .user-info p:hover {
+  border-left-color: var(--blue-primary);
+  background-color: var(--blue-bg);
+}
+
+.user-card:nth-child(5n+4) .user-info p:hover {
+  border-left-color: var(--orange-primary);
+  background-color: var(--orange-bg);
+}
+
+.user-card:nth-child(5n+5) .user-info p:hover {
+  border-left-color: var(--pink-primary);
+  background-color: var(--pink-bg);
+}
+
+/* Match actions gradient to card theme */
+.user-card:nth-child(5n+1) .user-card-actions::before {
+  background: linear-gradient(to right, var(--teal-primary), transparent);
+}
+
+.user-card:nth-child(5n+2) .user-card-actions::before {
+  background: linear-gradient(to right, var(--purple-primary), transparent);
+}
+
+.user-card:nth-child(5n+3) .user-card-actions::before {
+  background: linear-gradient(to right, var(--blue-primary), transparent);
+}
+
+.user-card:nth-child(5n+4) .user-card-actions::before {
+  background: linear-gradient(to right, var(--orange-primary), transparent);
+}
+
+.user-card:nth-child(5n+5) .user-card-actions::before {
+  background: linear-gradient(to right, var(--pink-primary), transparent);
+}
+
+/* Update role badges for better visibility */
+.user-role.admin {
+  background-color: rgba(249, 115, 22, 0.25);
+  color: white;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.user-role.user {
+  background-color: rgba(59, 130, 246, 0.25);
+  color: white;
+  border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
 .user-card-header {
   padding: 1.5rem;
-  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-dark) 100%);
+  background: linear-gradient(135deg, var(--secondary-light) 0%, var(--secondary-dark) 100%);
   color: white;
   position: relative;
   overflow: hidden;
@@ -344,18 +423,6 @@
   gap: 0.5rem;
 }
 
-.user-role.admin {
-  background-color: rgba(245, 158, 11, 0.25);
-  color: white;
-  border: 1px solid rgba(245, 158, 11, 0.3);
-}
-
-.user-role.user {
-  background-color: rgba(59, 130, 246, 0.25);
-  color: white;
-  border: 1px solid rgba(59, 130, 246, 0.3);
-}
-
 .user-card-body {
   padding: 1.5rem;
   flex-grow: 1;
@@ -378,8 +445,8 @@
 }
 
 .user-info p:hover {
-  border-left-color: var(--primary-light);
-  background-color: var(--primary-bg);
+  border-left-color: var(--secondary-light);
+  background-color: rgba(15, 118, 110, 0.05);
   transform: translateX(5px);
   padding: 10px;
   border-radius: 0 8px 8px 0;
@@ -409,7 +476,7 @@
 }
 
 .user-info p svg {
-  color: var(--primary-color);
+  color: var(--secondary-color);
   font-size: 1.1rem;
   transition: all var(--transition-normal);
 }
@@ -442,7 +509,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(to right, var(--primary-light), transparent);
+  background: linear-gradient(to right, var(--secondary-light), transparent);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.5s ease-out;
@@ -468,7 +535,7 @@
 }
 
 .btn-edit {
-  background: var(--warning-color);
+  background: var(--purple-primary);
   color: white;
 }
 
@@ -495,17 +562,30 @@
   flex-direction: column;
   align-items: center;
   gap: 1.5rem;
+  position: relative;
+  overflow: hidden;
 }
 
-.loading::before {
-  content: '⌛';
-  font-size: 2.5rem;
-  animation: spin 2s linear infinite;
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 200%;
+  height: 3px;
+  background: linear-gradient(to right,
+    var(--teal-primary),
+    var(--purple-primary),
+    var(--blue-primary),
+    var(--orange-primary),
+    var(--pink-primary),
+    var(--teal-primary));
+  animation: gradientSlide 2s linear infinite;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+@keyframes gradientSlide {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(50%); }
 }
 
 .loading p {
@@ -601,7 +681,7 @@
   padding: 2rem;
   margin-bottom: 2rem;
   animation: floatIn 0.6s ease-out forwards;
-  border: 1px solid rgba(79, 70, 229, 0.1);
+  border: 1px solid var(--gray-200);
   position: relative;
   overflow: hidden;
 }
@@ -613,7 +693,12 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+  background: linear-gradient(90deg, 
+    var(--teal-primary), 
+    var(--purple-primary), 
+    var(--blue-primary), 
+    var(--orange-primary), 
+    var(--pink-primary));
 }
 
 .user-form-container h2 {
@@ -657,8 +742,8 @@
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  border-color: var(--teal-primary);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.2);
 }
 
 .form-actions {
@@ -669,7 +754,7 @@
 }
 
 .btn-submit {
-  background-color: #4f46e5;
+  background: linear-gradient(to right, var(--teal-primary), var(--blue-primary));
   color: white;
   padding: 0.6rem 1.2rem;
   border: none;
@@ -678,13 +763,13 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s;
-  box-shadow: 0 2px 5px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 2px 5px rgba(45, 212, 191, 0.3);
 }
 
 .btn-submit:hover {
-  background-color: #4338ca;
+  background: linear-gradient(to right, var(--teal-dark), var(--blue-dark));
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(79, 70, 229, 0.4);
+  box-shadow: 0 4px 8px rgba(45, 212, 191, 0.4);
 }
 
 .btn-cancel {
