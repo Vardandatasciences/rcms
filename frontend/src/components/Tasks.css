@@ -93,7 +93,7 @@ body {
   margin-bottom: 2rem;
 }
 
-/* Table Container Styles */
+/* Enhanced Table Container Styles */
 .tasks-table-container {
   background-color: white;
   border-radius: var(--border-radius-xl);
@@ -101,6 +101,7 @@ body {
   overflow: hidden;
   margin-bottom: 2rem;
   animation: fadeInUp 0.5s ease-out;
+  padding: 0.5rem;
 }
 
 @keyframes fadeInUp {
@@ -114,209 +115,317 @@ body {
   }
 }
 
-/* Table Styles */
+/* Improved Table Styles - Modern, Clean Look */
 .tasks-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.95rem;
 }
 
 .tasks-table th {
-  padding: 1rem 1.5rem;
+  padding: 1.25rem 1.5rem;
   text-align: left;
   font-weight: 600;
   color: var(--gray-700);
-  background-color: var(--gray-50);
-  border-bottom: 1px solid var(--gray-200);
+  background-color: white;
   position: relative;
   cursor: pointer;
   transition: all var(--transition-fast);
+  border-bottom: 2px solid var(--gray-200);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .tasks-table th:hover {
-  color: var(--primary-color);
+  color: var(--primary-dark);
+}
+
+.tasks-table th::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--primary-color);
+  transform: scaleX(0);
+  transition: transform 0.2s ease-in-out;
+}
+
+.tasks-table th:hover::after {
+  transform: scaleX(1);
 }
 
 .tasks-table td {
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--gray-100);
+  padding: 1.25rem 1.5rem;
   color: var(--gray-800);
+  vertical-align: middle;
+  border: none;
+  position: relative;
 }
 
-.tasks-table tr:last-child td {
-  border-bottom: none;
-}
-
-.tasks-table tr {
+.tasks-table tbody tr {
   transition: all var(--transition-fast);
   animation: fadeIn 0.5s ease-out forwards;
   opacity: 0;
+  background-color: white;
+  box-shadow: none;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.tasks-table tbody tr:not(:last-child) {
+  border-bottom: 1px solid var(--gray-100);
 }
 
-.tasks-table tr:hover {
+.tasks-table tbody tr:hover {
   background-color: var(--gray-50);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  z-index: 1;
 }
 
-/* Status badges */
+/* Status-based row styling */
+.tasks-table tr.status-completed-row {
+  background-color: white;
+  position: relative;
+}
+
+.tasks-table tr.status-in-progress-row {
+  background-color: white;
+  position: relative;
+}
+
+.tasks-table tr.status-pending-row {
+  background-color: white;
+  position: relative;
+}
+
+.tasks-table tr.status-overdue-row {
+  background-color: white;
+  position: relative;
+}
+
+/* Add subtle left indicators for status */
+.tasks-table tr.status-completed-row::before,
+.tasks-table tr.status-in-progress-row::before,
+.tasks-table tr.status-pending-row::before,
+.tasks-table tr.status-overdue-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 2px;
+}
+
+.tasks-table tr.status-completed-row::before {
+  background-color: var(--success-color);
+}
+
+.tasks-table tr.status-in-progress-row::before {
+  background-color: var(--warning-color);
+}
+
+.tasks-table tr.status-pending-row::before {
+  background-color: var(--info-color);
+}
+
+.tasks-table tr.status-overdue-row::before {
+  background-color: var(--danger-color);
+}
+
+/* Enhanced status badges */
 .status-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.375rem 0.75rem;
+  padding: 0.5rem 0.75rem;
   border-radius: var(--border-radius-full);
   font-size: 0.75rem;
   font-weight: 600;
+  position: relative;
+  overflow: hidden;
+}
+
+.status-badge::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: currentColor;
+  opacity: 0.1;
+  border-radius: inherit;
 }
 
 .status-completed {
-  background-color: var(--success-bg);
   color: var(--success-color);
 }
 
 .status-in-progress {
-  background-color: var(--primary-bg);
-  color: var(--primary-color);
+  color: var(--warning-color);
 }
 
 .status-pending {
-  background-color: var(--info-bg);
   color: var(--info-color);
 }
 
 .status-overdue {
-  background-color: var(--danger-bg);
   color: var(--danger-color);
 }
 
-/* Action buttons */
-.actions-cell {
-  white-space: nowrap;
+/* Enhanced criticality badges */
+.criticality-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
-.btn-view,
-.btn-update,
+.criticality-high {
+  background-color: rgba(220, 38, 38, 0.1) !important;
+  color: var(--danger-color) !important;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.criticality-medium {
+  background-color: rgba(217, 119, 6, 0.1) !important;
+  color: var(--warning-color) !important;
+  border: 1px solid rgba(217, 119, 6, 0.2);
+}
+
+.criticality-low {
+  background-color: rgba(5, 150, 105, 0.1) !important;
+  color: var(--success-color) !important;
+  border: 1px solid rgba(5, 150, 105, 0.2);
+}
+
+/* Enhanced entity badge */
+.entity-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0.85rem;
+  background-color: var(--gray-100);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: var(--gray-700);
+  font-weight: 500;
+  border-left: 3px solid var(--primary-color);
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.entity-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: var(--gray-50);
+}
+
+/* Enhanced action buttons */
 .btn-reassign {
   display: inline-flex;
   align-items: center;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: var(--border-radius-lg);
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  box-shadow: var(--shadow-sm);
-  margin-right: 0.5rem;
-}
-
-.btn-view {
+  justify-content: center;
+  padding: 0.6rem 1.2rem;
   background-color: var(--primary-color);
   color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+  position: relative;
+  overflow: hidden;
 }
 
-.btn-view:hover {
-  background-color: var(--primary-dark);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
-}
-
-.btn-update {
-  background-color: var(--warning-color);
-  color: white;
-}
-
-.btn-update:hover {
-  background-color: var(--warning-dark);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(217, 119, 6, 0.3);
-}
-
-.btn-reassign {
-  background-color: var(--info-color);
-  color: white;
+.btn-reassign::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
 }
 
 .btn-reassign:hover {
-  background-color: var(--info-dark);
+  background-color: var(--primary-dark);
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
 }
 
-.btn-disabled,
-.btn-disabled:hover {
+.btn-reassign:hover::after {
+  transform: translateX(100%);
+}
+
+.btn-reassign.btn-disabled {
   background-color: var(--gray-300);
   color: var(--gray-500);
   cursor: not-allowed;
-  transform: none;
   box-shadow: none;
-  opacity: 0.7;
 }
 
-/* Loading, error, and no-tasks states */
-.loading,
-.error-message,
-.no-tasks {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 5rem 2rem;
+.btn-reassign.btn-disabled:hover {
+  transform: none;
+}
+
+.btn-reassign.btn-disabled::after {
+  display: none;
+}
+
+/* Add alternating row colors for better readability */
+.tasks-table tbody tr:nth-child(even) {
+  background-color: var(--gray-50);
+}
+
+.tasks-table tbody tr:nth-child(even):hover {
+  background-color: var(--gray-100);
+}
+
+/* Improve user name displays */
+.tasks-table td:nth-child(6),
+.tasks-table td:nth-child(7) {
+  font-weight: 500;
+}
+
+/* Due date styling */
+.delayed-text {
+  color: var(--danger-color) !important;
+  font-weight: 600;
+  position: relative;
+}
+
+.delayed-text::after {
+  content: '!';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-color: var(--danger-color);
+  color: white;
+  font-size: 12px;
+  line-height: 16px;
   text-align: center;
-  background-color: white;
-  border-radius: var(--border-radius-xl);
-  box-shadow: var(--shadow-lg);
-  animation: fadeIn 0.5s ease-out;
-}
-
-.loading {
-  color: var(--primary-color);
-}
-
-.loading::before {
-  content: "";
-  width: 50px;
-  height: 50px;
-  border: 3px solid rgba(59, 130, 246, 0.2);
-  border-top: 3px solid var(--primary-color);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 1.5rem;
+  margin-left: 6px;
+  animation: pulse 1.5s infinite;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
 }
-
-.error-message {
-  color: var(--danger-color);
-}
-
-.no-tasks {
-  color: var(--gray-600);
-}
-
-.no-tasks::before {
-  content: "📋";
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  opacity: 0.5;
-}
-
-/* Animation sequence for table rows */
-.tasks-table tr:nth-child(1) { animation-delay: 0.05s; }
-.tasks-table tr:nth-child(2) { animation-delay: 0.1s; }
-.tasks-table tr:nth-child(3) { animation-delay: 0.15s; }
-.tasks-table tr:nth-child(4) { animation-delay: 0.2s; }
-.tasks-table tr:nth-child(5) { animation-delay: 0.25s; }
-.tasks-table tr:nth-child(6) { animation-delay: 0.3s; }
-.tasks-table tr:nth-child(7) { animation-delay: 0.35s; }
-.tasks-table tr:nth-child(8) { animation-delay: 0.4s; }
-.tasks-table tr:nth-child(9) { animation-delay: 0.45s; }
-.tasks-table tr:nth-child(10) { animation-delay: 0.5s; }
 
 /* Add a header section like in Activities.css */
 .tasks-header {
@@ -1067,39 +1176,6 @@ body {
   font-size: 0.75rem;
 }
 
-/* Enhanced background colors for criticality badges */
-.criticality-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.15rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.criticality-high {
-  background-color: var(--danger-color) !important;
-  color: white !important;
-}
-
-.criticality-medium {
-  background-color: var(--warning-color) !important;
-  color: white !important;
-}
-
-.criticality-low {
-  background-color: var(--success-color) !important;
-  color: white !important;
-}
-
-/* Override previous badge styling that might conflict */
-.tasks-container .criticality-badge {
-  background-color: inherit !important;
-  color: inherit !important;
-}
-
 /* Add background color to status in the detail section */
 .detail-content.status-container {
   background-color: var(--gray-50);
@@ -1280,12 +1356,6 @@ body {
   color: var(--danger-color);
 }
 
-/* Make delayed date text red with bold font */
-.delayed-text {
-  color: var(--danger-color) !important;
-  font-weight: 600;
-}
-
 /* Animation sequence for cards */
 .task-card:nth-child(1) { animation-delay: 0.05s; }
 .task-card:nth-child(2) { animation-delay: 0.1s; }
@@ -1416,4 +1486,80 @@ body {
 
 .tasks-container .btn-refresh:hover {
   background-color: #B06E45;
+}
+
+/* Entity name styling for cards */
+.entity-name {
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-weight: 500;
+  margin-bottom: 4px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* Add a little more spacing in the card header when entity is shown */
+.task-card .header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Styles for entity badge */
+.entity-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #444;
+  font-weight: 500;
+  border-left: 3px solid #3498db;
+}
+
+/* Styles for entity badge in grid view */
+.entity-badge-grid {
+  display: inline-block;
+  padding: 4px 8px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #444;
+  font-weight: 500;
+  margin-left: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+/* Entity filter menu styles */
+.entity-filter-menu {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.entity-filter-menu .filter-section {
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.entity-filter-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.entity-filter-menu::-webkit-scrollbar-track {
+  background: var(--gray-100);
+  border-radius: 6px;
+}
+
+.entity-filter-menu::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: 6px;
+}
+
+.entity-filter-menu::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-400);
 }

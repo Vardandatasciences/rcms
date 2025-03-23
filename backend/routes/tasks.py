@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, session
 from models import db
-from models.models import EntityRegulationTasks, RegulationMaster, ActivityMaster, Users, HolidayMaster
+from models.models import EntityRegulationTasks, RegulationMaster, ActivityMaster, Users, HolidayMaster ,EntityMaster
 from sqlalchemy import or_
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -8,64 +8,64 @@ import traceback
 
 tasks_bp = Blueprint('tasks', __name__)
 
-@tasks_bp.route('/entity_regulation_tasks/<string:entity_id>', methods=['GET'])
-def get_entity_regulation_tasks(entity_id):
-    try:
-        # Use SQLAlchemy to query tasks for the specified entity
-        tasks_query = db.session.query(
-            EntityRegulationTasks,
-            RegulationMaster.regulation_name,
-            ActivityMaster.activity.label('activity_name')
-        ).join(
-            RegulationMaster,
-            EntityRegulationTasks.regulation_id == RegulationMaster.regulation_id
-        ).join(
-            ActivityMaster,
-            (EntityRegulationTasks.regulation_id == ActivityMaster.regulation_id) &
-            (EntityRegulationTasks.activity_id == ActivityMaster.activity_id)
-        ).filter(
-            EntityRegulationTasks.entity_id == entity_id
-        )
+# @tasks_bp.route('/entity_regulation_tasks/<string:entity_id>', methods=['GET'])
+# def get_entity_regulation_tasks(entity_id):
+#     try:
+#         # Use SQLAlchemy to query tasks for the specified entity
+#         tasks_query = db.session.query(
+#             EntityRegulationTasks,
+#             RegulationMaster.regulation_name,
+#             ActivityMaster.activity.label('activity_name')
+#         ).join(
+#             RegulationMaster,
+#             EntityRegulationTasks.regulation_id == RegulationMaster.regulation_id
+#         ).join(
+#             ActivityMaster,
+#             (EntityRegulationTasks.regulation_id == ActivityMaster.regulation_id) &
+#             (EntityRegulationTasks.activity_id == ActivityMaster.activity_id)
+#         ).filter(
+#             EntityRegulationTasks.entity_id == entity_id
+#         )
         
-        tasks = tasks_query.all()
+#         tasks = tasks_query.all()
         
-        # Convert to JSON response
-        tasks_list = [
-            {
-                "id": task.EntityRegulationTasks.id,
-                "entity_id": task.EntityRegulationTasks.entity_id,
-                "regulation_id": task.EntityRegulationTasks.regulation_id,
-                "regulation_name": task.regulation_name,
-                "activity_id": task.EntityRegulationTasks.activity_id,
-                "activity_name": task.activity_name,
-                "activity": task.activity_name,  # For backward compatibility
-                "preparation_responsibility": task.EntityRegulationTasks.preparation_responsibility,
-                "review_responsibility": task.EntityRegulationTasks.review_responsibility,
-                "due_on": task.EntityRegulationTasks.due_on.strftime('%Y-%m-%d') if task.EntityRegulationTasks.due_on else None,
-                "start_date": task.EntityRegulationTasks.start_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.start_date else None,
-                "end_date": task.EntityRegulationTasks.end_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.end_date else None,
-                "status": task.EntityRegulationTasks.status,
-                "ews": task.EntityRegulationTasks.ews,
-                "remarks": task.EntityRegulationTasks.remarks,
-                "upload": task.EntityRegulationTasks.upload,
-                "review_remarks": task.EntityRegulationTasks.review_remarks,
-                "review_start_date": task.EntityRegulationTasks.review_start_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.review_start_date else None,
-                "review_end_date": task.EntityRegulationTasks.review_end_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.review_end_date else None,
-                "review_upload": task.EntityRegulationTasks.review_upload,
-                "mandatory_optional": task.EntityRegulationTasks.mandatory_optional,
-                "criticality": task.EntityRegulationTasks.criticality,
-                "internal_external": task.EntityRegulationTasks.internal_external,
-                "documentupload_yes_no": task.EntityRegulationTasks.documentupload_yes_no
-            }
-            for task in tasks
-        ]
+#         # Convert to JSON response
+#         tasks_list = [
+#             {
+#                 "id": task.EntityRegulationTasks.id,
+#                 "entity_id": task.EntityRegulationTasks.entity_id,
+#                 "regulation_id": task.EntityRegulationTasks.regulation_id,
+#                 "regulation_name": task.regulation_name,
+#                 "activity_id": task.EntityRegulationTasks.activity_id,
+#                 "activity_name": task.activity_name,
+#                 "activity": task.activity_name,  # For backward compatibility
+#                 "preparation_responsibility": task.EntityRegulationTasks.preparation_responsibility,
+#                 "review_responsibility": task.EntityRegulationTasks.review_responsibility,
+#                 "due_on": task.EntityRegulationTasks.due_on.strftime('%Y-%m-%d') if task.EntityRegulationTasks.due_on else None,
+#                 "start_date": task.EntityRegulationTasks.start_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.start_date else None,
+#                 "end_date": task.EntityRegulationTasks.end_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.end_date else None,
+#                 "status": task.EntityRegulationTasks.status,
+#                 "ews": task.EntityRegulationTasks.ews,
+#                 "remarks": task.EntityRegulationTasks.remarks,
+#                 "upload": task.EntityRegulationTasks.upload,
+#                 "review_remarks": task.EntityRegulationTasks.review_remarks,
+#                 "review_start_date": task.EntityRegulationTasks.review_start_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.review_start_date else None,
+#                 "review_end_date": task.EntityRegulationTasks.review_end_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.review_end_date else None,
+#                 "review_upload": task.EntityRegulationTasks.review_upload,
+#                 "mandatory_optional": task.EntityRegulationTasks.mandatory_optional,
+#                 "criticality": task.EntityRegulationTasks.criticality,
+#                 "internal_external": task.EntityRegulationTasks.internal_external,
+#                 "documentupload_yes_no": task.EntityRegulationTasks.documentupload_yes_no
+#             }
+#             for task in tasks
+#         ]
         
-        return jsonify({"tasks": tasks_list}), 200
+#         return jsonify({"tasks": tasks_list}), 200
     
-    except Exception as e:
-        print("Error:", str(e))
-        print(traceback.format_exc())  # Print full traceback for debugging
-        return jsonify({"error": str(e)}), 500
+#     except Exception as e:
+#         print("Error:", str(e))
+#         print(traceback.format_exc())  # Print full traceback for debugging
+#         return jsonify({"error": str(e)}), 500
 
 @tasks_bp.route('/check_task_exists/<string:entity_id>/<string:regulation_id>/<string:activity_id>', methods=['GET'])
 def check_task_exists(entity_id, regulation_id, activity_id):
@@ -428,3 +428,125 @@ def update_task_status():
         traceback.print_exc()
         return jsonify({'error': 'An error occurred while updating task status'}), 500 
     
+
+
+@tasks_bp.route('/all_regulation_tasks', methods=['GET'])
+def get_all_regulation_tasks():
+    try:
+        # Use SQLAlchemy to query all tasks across all entities
+        tasks_query = db.session.query(
+            EntityRegulationTasks,
+            RegulationMaster.regulation_name,
+            ActivityMaster.activity.label('activity_name'),
+            EntityMaster.entity_name  # Add entity_name to provide context
+        ).join(
+            RegulationMaster,
+            EntityRegulationTasks.regulation_id == RegulationMaster.regulation_id
+        ).join(
+            ActivityMaster,
+            (EntityRegulationTasks.regulation_id == ActivityMaster.regulation_id) &
+            (EntityRegulationTasks.activity_id == ActivityMaster.activity_id)
+        ).join(
+            EntityMaster,
+            EntityRegulationTasks.entity_id == EntityMaster.entity_id
+        )
+        
+        tasks = tasks_query.all()
+        
+        # Convert to JSON response
+        tasks_list = [
+            {
+                "id": task.EntityRegulationTasks.id,
+                "entity_id": task.EntityRegulationTasks.entity_id,
+                "entity_name": task.entity_name,  # Include entity name for Global users
+                "regulation_id": task.EntityRegulationTasks.regulation_id,
+                "regulation_name": task.regulation_name,
+                "activity_id": task.EntityRegulationTasks.activity_id,
+                "activity_name": task.activity_name,
+                "activity": task.activity_name,  # For backward compatibility
+                "preparation_responsibility": task.EntityRegulationTasks.preparation_responsibility,
+                "review_responsibility": task.EntityRegulationTasks.review_responsibility,
+                "due_on": task.EntityRegulationTasks.due_on.strftime('%Y-%m-%d') if task.EntityRegulationTasks.due_on else None,
+                "start_date": task.EntityRegulationTasks.start_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.start_date else None,
+                "end_date": task.EntityRegulationTasks.end_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.end_date else None,
+                "status": task.EntityRegulationTasks.status,
+                "ews": task.EntityRegulationTasks.ews,
+                "remarks": task.EntityRegulationTasks.remarks,
+                "upload": task.EntityRegulationTasks.upload,
+                "review_remarks": task.EntityRegulationTasks.review_remarks,
+                "review_start_date": task.EntityRegulationTasks.review_start_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.review_start_date else None,
+                "review_end_date": task.EntityRegulationTasks.review_end_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.review_end_date else None,
+                "review_upload": task.EntityRegulationTasks.review_upload,
+                "mandatory_optional": task.EntityRegulationTasks.mandatory_optional,
+                "criticality": task.EntityRegulationTasks.criticality,
+                "internal_external": task.EntityRegulationTasks.internal_external,
+                "documentupload_yes_no": task.EntityRegulationTasks.documentupload_yes_no
+            }
+            for task in tasks
+        ]
+        
+        return jsonify({"tasks": tasks_list}), 200
+    
+    except Exception as e:
+        print("Error:", str(e))
+        print(traceback.format_exc())  # Print full traceback for debugging
+        return jsonify({"error": str(e)}), 500
+
+@tasks_bp.route('/entity_regulation_tasks/<string:entity_id>', methods=['GET'])
+def get_entity_regulation_tasks(entity_id):
+    try:
+        # Use SQLAlchemy to query tasks for the specified entity
+        tasks_query = db.session.query(
+            EntityRegulationTasks,
+            RegulationMaster.regulation_name,
+            ActivityMaster.activity.label('activity_name')
+        ).join(
+            RegulationMaster,
+            EntityRegulationTasks.regulation_id == RegulationMaster.regulation_id
+        ).join(
+            ActivityMaster,
+            (EntityRegulationTasks.regulation_id == ActivityMaster.regulation_id) &
+            (EntityRegulationTasks.activity_id == ActivityMaster.activity_id)
+        ).filter(
+            EntityRegulationTasks.entity_id == entity_id
+        )
+        
+        tasks = tasks_query.all()
+        
+        # Convert to JSON response
+        tasks_list = [
+            {
+                "id": task.EntityRegulationTasks.id,
+                "entity_id": task.EntityRegulationTasks.entity_id,
+                "regulation_id": task.EntityRegulationTasks.regulation_id,
+                "regulation_name": task.regulation_name,
+                "activity_id": task.EntityRegulationTasks.activity_id,
+                "activity_name": task.activity_name,
+                "activity": task.activity_name,  # For backward compatibility
+                "preparation_responsibility": task.EntityRegulationTasks.preparation_responsibility,
+                "review_responsibility": task.EntityRegulationTasks.review_responsibility,
+                "due_on": task.EntityRegulationTasks.due_on.strftime('%Y-%m-%d') if task.EntityRegulationTasks.due_on else None,
+                "start_date": task.EntityRegulationTasks.start_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.start_date else None,
+                "end_date": task.EntityRegulationTasks.end_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.end_date else None,
+                "status": task.EntityRegulationTasks.status,
+                "ews": task.EntityRegulationTasks.ews,
+                "remarks": task.EntityRegulationTasks.remarks,
+                "upload": task.EntityRegulationTasks.upload,
+                "review_remarks": task.EntityRegulationTasks.review_remarks,
+                "review_start_date": task.EntityRegulationTasks.review_start_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.review_start_date else None,
+                "review_end_date": task.EntityRegulationTasks.review_end_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.review_end_date else None,
+                "review_upload": task.EntityRegulationTasks.review_upload,
+                "mandatory_optional": task.EntityRegulationTasks.mandatory_optional,
+                "criticality": task.EntityRegulationTasks.criticality,
+                "internal_external": task.EntityRegulationTasks.internal_external,
+                "documentupload_yes_no": task.EntityRegulationTasks.documentupload_yes_no
+            }
+            for task in tasks
+        ]
+        
+        return jsonify({"tasks": tasks_list}), 200
+    
+    except Exception as e:
+        print("Error:", str(e))
+        print(traceback.format_exc())  # Print full traceback for debugging
+        return jsonify({"error": str(e)}), 500

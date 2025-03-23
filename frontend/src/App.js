@@ -43,6 +43,7 @@ import AddHoliday from './components/AddHoliday';
 // Import Tasks component
 import Tasks from './components/Tasks';
 import ReassignTask from './components/ReassignTask';
+import UserTask from './components/UserTask';
 
 // Protected Route component for role-based access control
 const ProtectedRoute = ({ element, allowedRoles }) => {
@@ -56,7 +57,7 @@ const ProtectedRoute = ({ element, allowedRoles }) => {
   const user = JSON.parse(userData);
   
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // User doesn't have the required role, redirect to home instead of dashboard
+    // User doesn't have the required role, redirect to home
     return <Navigate to="/" />;
   }
   
@@ -75,10 +76,10 @@ function App() {
           {/* Make Home the default route */}
           <Route path="/" element={<Home />} />
           
-          {/* Protected routes */}
+          {/* Protected routes
           <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
           <Route path="/dashboard/:role" element={<ProtectedRoute element={<Dashboard />} />} />
-          
+           */}
           {/* Entity routes - Only for Global role */}
           <Route 
             path="/entities" 
@@ -100,7 +101,7 @@ function App() {
           {/* User routes - For Admin and User roles */}
           <Route 
             path="/users" 
-            element={<ProtectedRoute element={<Users />} allowedRoles={['Admin', 'User']} />} 
+            element={<ProtectedRoute element={<Users />} allowedRoles={['Admin', 'Global']} />} 
           />
           <Route 
             path="/users/add" 
@@ -191,6 +192,12 @@ function App() {
           <Route 
             path="/reassign-task/:taskId" 
             element={<ProtectedRoute element={<ReassignTask />} allowedRoles={['Global', 'Admin']} />} 
+          />
+          
+          {/* User Task route - For User role */}
+          <Route 
+            path="/user-tasks" 
+            element={<ProtectedRoute element={<UserTask />} allowedRoles={['User']} />} 
           />
           
           {/* Catch all route - redirect to home instead of dashboard */}

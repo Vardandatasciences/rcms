@@ -17,6 +17,9 @@ const Tasks = () => {
     status: [],
     criticality: []
   });
+  const [showEntityColumn, setShowEntityColumn] = useState(false);
+  const [entityFilters, setEntityFilters] = useState([]);
+  const [entityFilterDropdownOpen, setEntityFilterDropdownOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,8 +31,29 @@ const Tasks = () => {
     }
 
     const parsedUserData = JSON.parse(userData);
+    
+    // If a User role tries to access this component, redirect them
+    if (parsedUserData.role === "User") {
+      navigate("/user-tasks");
+      return;
+    }
+    
     setUser(parsedUserData);
 
+    // Determine if we should show the entity column (for Global users)
+    setShowEntityColumn(parsedUserData.role === "Global");
+
+    // For Global users, we don't need entityId as we'll fetch all tasks
+    if (parsedUserData.role === "Global") {
+      Promise.all([
+        fetchAllTasks(),
+        fetchUsers() // For Global users, we need to fetch users differently
+      ]).catch(err => {
+        console.error("Error in initial data loading:", err);
+        setLoading(false);
+      });
+    } else {
+      // For Admin users, continue with entity-specific fetching
     // Get entity_id from userData with fallbacks for different property names
     let entityId = null;
     if (parsedUserData) {
@@ -43,7 +67,7 @@ const Tasks = () => {
       return;
     }
 
-    // Fetch tasks and users in parallel
+      // Fetch tasks and users in parallel for Admin users
     Promise.all([
       fetchTasks(entityId),
       fetchUsers(entityId)
@@ -51,7 +75,76 @@ const Tasks = () => {
       console.error("Error in initial data loading:", err);
       setLoading(false);
     });
+    }
   }, [navigate]);
+
+  const fetchAllTasks = async () => {
+    try {
+      console.log("Fetching all tasks across entities for Global user");
+      const response = await axios.get(`http://localhost:5000/all_regulation_tasks`);
+      console.log("All tasks response:", response.data);
+      
+      // Process tasks to ensure they have all required fields
+      const processedTasks = (response.data.tasks || []).map(task => {
+        // Ensure regulation_name is available
+        if (!task.regulation_name) {
+          const regId = task.regulation_id;
+          task.regulation_name = regId || "Unknown Regulation";
+        }
+        
+        // Ensure activity_name is available
+        if (!task.activity) {
+          task.activity_name = `Activity ${task.activity_id}`;
+        } else {
+          task.activity_name = task.activity;
+        }
+        
+        // Ensure entity_name is available
+        if (!task.entity_name) {
+          task.entity_name = `Entity ${task.entity_id}`;
+        }
+        
+        return task;
+      });
+      
+      setTasks(processedTasks);
+      return processedTasks;
+    } catch (err) {
+      console.error("Error fetching all tasks:", err);
+      setError("Failed to fetch tasks. Please try again later.");
+      throw err;
+    }
+  };
+
+  const fetchUsers = async (entityId = null) => {
+    try {
+      let response;
+      
+      if (entityId) {
+        console.log(`Fetching users for entity ID: ${entityId}`);
+        response = await axios.get(`http://localhost:5000/entity_users/${entityId}`);
+      } else {
+        console.log("Fetching all users for Global user");
+        response = await axios.get(`http://localhost:5000/all_users`);
+      }
+      
+      console.log("Users response:", response.data);
+      
+      // Create a map of user_id to user_name for easy lookup
+      const usersMap = {};
+      (response.data.users || []).forEach(user => {
+        usersMap[user.user_id] = user.user_name;
+      });
+      
+      setUsers(usersMap);
+      setLoading(false);
+      return usersMap;
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      setLoading(false);
+      throw err;
+    }
+  };
 
   const fetchTasks = async (entityId) => {
     try {
@@ -87,28 +180,6 @@ const Tasks = () => {
     }
   };
 
-  const fetchUsers = async (entityId) => {
-    try {
-      console.log(`Fetching users for entity ID: ${entityId}`);
-      const response = await axios.get(`http://localhost:5000/entity_users/${entityId}`);
-      console.log("Users response:", response.data);
-      
-      // Create a map of user_id to user_name for easy lookup
-      const usersMap = {};
-      (response.data.users || []).forEach(user => {
-        usersMap[user.user_id] = user.user_name;
-      });
-      
-      setUsers(usersMap);
-      setLoading(false);
-      return usersMap;
-    } catch (err) {
-      console.error("Error fetching users:", err);
-      setLoading(false);
-      throw err;
-    }
-  };
-
   const handleReassignTask = (task) => {
     // Don't allow reassignment of completed tasks
     if (task.status === "Completed") {
@@ -128,15 +199,38 @@ const Tasks = () => {
     navigate(`/reassign-task/${task.id}`, { state: { task: taskToPass } });
   };
 
-  // Count tasks by status
+  // Add this function to calculate tasks filtered by everything except status/criticality
+  const getTasksFilteredByEntityAndSearch = () => {
+    return tasks.filter(task => {
+      // Search term filter
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = 
+        searchTerm === '' || 
+        (task.regulation_name && task.regulation_name.toLowerCase().includes(searchLower)) ||
+        (task.activity_name && task.activity_name.toLowerCase().includes(searchLower)) ||
+        (task.status && task.status.toLowerCase().includes(searchLower));
+      
+      // Entity filter - only apply for Global users
+      const matchesEntity = 
+        entityFilters.length === 0 || 
+        entityFilters.includes(task.entity_name);
+      
+      return matchesSearch && matchesEntity;
+    });
+  };
+
+  // Now update the getStatusStats function to use this filtered set
   const getStatusStats = () => {
+    // Use tasks filtered only by entity and search
+    const tasksToCount = getTasksFilteredByEntityAndSearch();
+    
     const stats = {
       completed: 0,
       inProgress: 0,
       yetToStart: 0,
     };
     
-    tasks.forEach(task => {
+    tasksToCount.forEach(task => {
       const status = task.status ? task.status.toLowerCase() : '';
       
       if (status.includes('complete')) {
@@ -154,10 +248,11 @@ const Tasks = () => {
     return stats;
   };
 
-  // Calculate percentages for the stat cards
+  // Update the calculatePercentage function too
   const calculatePercentage = (count) => {
-    if (tasks.length === 0) return 0;
-    return Math.round((count / tasks.length) * 100);
+    const tasksToCount = getTasksFilteredByEntityAndSearch();
+    if (tasksToCount.length === 0) return 0;
+    return Math.round((count / tasksToCount.length) * 100);
   };
 
   // Helper function to determine CSS class based on status
@@ -225,7 +320,12 @@ const Tasks = () => {
       activeFilters.criticality.length === 0 || 
       activeFilters.criticality.includes(task.criticality ? task.criticality.toLowerCase() : 'medium');
     
-    return matchesSearch && matchesStatus && matchesCriticality;
+    // Entity filter - only apply for Global users
+    const matchesEntity = 
+      entityFilters.length === 0 || 
+      entityFilters.includes(task.entity_name);
+    
+    return matchesSearch && matchesStatus && matchesCriticality && matchesEntity;
   });
 
   // Helper function to format date
@@ -263,17 +363,216 @@ const Tasks = () => {
     }
   };
 
+  // Toggle entity filter
+  const toggleEntityFilter = (entityName) => {
+    setEntityFilters(prev => {
+      if (prev.includes(entityName)) {
+        return prev.filter(name => name !== entityName);
+      } else {
+        return [...prev, entityName];
+      }
+    });
+  };
+
   // Clear all filters
   const clearFilters = () => {
     setActiveFilters({
       status: [],
       criticality: []
     });
+    setEntityFilters([]);
     setSearchTerm("");
   };
 
-  // Get status stats for cards
-  const statusStats = getStatusStats();
+  // Add React useMemo to cache and update stats when filters change
+  // Replace the current statusStats line with:
+  const statusStats = React.useMemo(() => {
+    return getStatusStats();
+  }, [tasks, searchTerm, entityFilters]); // Re-calculate when these dependencies change
+
+  // Modify the refresh handler to use the appropriate fetch method
+  const handleRefresh = () => {
+    if (!user) return;
+    
+    if (user.role === "Global") {
+      fetchAllTasks();
+    } else {
+      fetchTasks(user.entity_id);
+    }
+  };
+
+  // Add this function to get unique entity names from tasks
+  const getUniqueEntities = () => {
+    const entityNames = tasks.map(task => task.entity_name).filter(Boolean);
+    return [...new Set(entityNames)].sort();
+  };
+
+  // Define the renderListView function
+  const renderListView = () => (
+    <div className="tasks-table-container">
+      <table className="tasks-table">
+        <thead>
+          <tr>
+            {showEntityColumn && <th>Entity</th>}
+            <th>Regulation</th>
+            <th>Activity</th>
+            <th>Due Date</th>
+            <th>Status</th>
+            <th>Criticality</th>
+            <th>Preparer</th>
+            <th>Reviewer</th>
+            <th>{user.role === "Global" ? "Entity" : "Actions"}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredTasks.map((task) => {
+            const statusClass = getStatusClass(task.status);
+            const isDelayed = isTaskDelayed(task);
+            const criticality = task.criticality ? task.criticality.toLowerCase() : 'medium';
+            
+            return (
+              <tr key={task.id} className={`${statusClass}-row`}>
+                {showEntityColumn && <td>{task.entity_name}</td>}
+                <td>{task.regulation_name || `Regulation ${task.regulation_id}`}</td>
+                <td>{task.activity_name || task.activity || `Activity ${task.activity_id}`}</td>
+                <td className={isDelayed ? 'delayed-text' : ''}>
+                  {formatDate(task.due_on)}
+                </td>
+                <td>
+                  <span className={`status-badge ${statusClass}`}>
+                    {task.status || "Yet to Start"}
+                  </span>
+                </td>
+                <td>
+                  <span className={`criticality-badge criticality-${criticality}`}>
+                    {task.criticality || "Medium"}
+                  </span>
+                </td>
+                <td>{getUserName(task.preparation_responsibility)}</td>
+                <td>{getUserName(task.review_responsibility)}</td>
+                <td className="actions-cell">
+                  {user.role === "Global" ? (
+                    <span className="entity-badge">{task.entity_name}</span>
+                  ) : (
+                    <button
+                      className={`btn-reassign ${task.status === "Completed" ? "btn-disabled" : ""}`}
+                      onClick={() => handleReassignTask(task)}
+                      disabled={task.status === "Completed"}
+                      title={task.status === "Completed" ? "Completed tasks cannot be reassigned" : "Reassign this task"}
+                    >
+                      Reassign
+                    </button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  // Define the renderGridView function
+  const renderGridView = () => (
+    <div className="tasks-grid">
+      {filteredTasks.map((task) => {
+        const statusClass = getStatusClass(task.status);
+        const isDelayed = isTaskDelayed(task);
+        const criticality = task.criticality ? task.criticality.toLowerCase() : 'medium';
+        
+        return (
+          <div key={task.id} className={`task-card ${statusClass}-top`}>
+            <div className="card-header">
+              <div className="header-left">
+                {showEntityColumn && <div className="entity-name">{task.entity_name}</div>}
+                <div className="regulation-id">{task.regulation_id || task.regulation_name}</div>
+                <div className="activity-id">{task.activity_id ? `#${task.activity_id}` : ''}</div>
+              </div>
+              <div className="header-right">
+                {isDelayed && <span className="delayed-badge">DELAYED</span>}
+                <span className={`criticality-badge criticality-${criticality}`}>
+                  {task.criticality || "MEDIUM"}
+                </span>
+                {user.role !== "Global" && (
+                  <button
+                    className={`btn-reassign-action-top ${task.status === "Completed" ? "btn-disabled" : ""}`}
+                    onClick={() => handleReassignTask(task)}
+                    disabled={task.status === "Completed"}
+                  >
+                    Reassign
+                  </button>
+                )}
+                {user.role === "Global" && !showEntityColumn && (
+                  <span className="entity-badge-grid">{task.entity_name}</span>
+                )}
+              </div>
+            </div>
+            
+            <div className="card-body">
+              <h3 className="task-title">{task.activity_name || task.activity || `Activity ${task.activity_id}`}</h3>
+              
+              <div className="task-details-container">
+                <div className="detail-item">
+                  <div className="detail-label">DUE DATE</div>
+                  <div className="detail-content">
+                    <div className="detail-icon">
+                      <i className="fas fa-calendar-alt"></i>
+                    </div>
+                    <div className={`detail-value ${isDelayed ? 'delayed-text' : ''}`}>
+                      {formatDate(task.due_on)}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="detail-item">
+                  <div className="detail-label">STATUS</div>
+                  <div className={`detail-content status-container ${statusClass}`}>
+                    <div className="detail-icon">
+                      <i className={`fas fa-circle status-icon ${statusClass}`}></i>
+                    </div>
+                    <div className={`detail-value ${statusClass}`}>
+                      {task.status || "Yet to Start"}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="detail-item">
+                  <div className="detail-label">PREPARER</div>
+                  <div className="detail-content">
+                    <div className="detail-icon">
+                      <i className="fas fa-user-edit"></i>
+                    </div>
+                    <div className="detail-value preparer-value">
+                      {getUserName(task.preparation_responsibility)}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="detail-item">
+                  <div className="detail-label">REVIEWER</div>
+                  <div className="detail-content">
+                    <div className="detail-icon">
+                      <i className="fas fa-user-check"></i>
+                    </div>
+                    <div className="detail-value reviewer-value">
+                      {getUserName(task.review_responsibility)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  // Define the renderRefreshButton function
+  const renderRefreshButton = () => (
+    <button className="btn-refresh" onClick={handleRefresh} aria-label="Refresh">
+      <i className="fas fa-sync-alt"></i>
+    </button>
+  );
 
   if (!user) return null;
 
@@ -296,7 +595,8 @@ const Tasks = () => {
 
         {/* Statistics Cards */}
         <div className="statistics-cards">
-          <div className="stat-card pending-card" onClick={() => toggleFilter('status', 'yet to start')} 
+          <div className={`stat-card pending-card ${activeFilters.status.includes('yet to start') ? 'active' : ''}`} 
+               onClick={() => toggleFilter('status', 'yet to start')} 
                style={{"--percentage": calculatePercentage(statusStats.yetToStart)}}>
             <div className="stat-icon-wrapper">
               <i className="fas fa-hourglass-start"></i>
@@ -312,7 +612,8 @@ const Tasks = () => {
             </div>
           </div>
 
-          <div className="stat-card progress-card" onClick={() => toggleFilter('status', 'in progress')}
+          <div className={`stat-card progress-card ${activeFilters.status.includes('in progress') ? 'active' : ''}`}
+               onClick={() => toggleFilter('status', 'in progress')}
                style={{"--percentage": calculatePercentage(statusStats.inProgress)}}>
             <div className="stat-icon-wrapper">
               <i className="fas fa-spinner fa-spin"></i>
@@ -328,7 +629,8 @@ const Tasks = () => {
             </div>
           </div>
 
-          <div className="stat-card completed-card" onClick={() => toggleFilter('status', 'completed')}
+          <div className={`stat-card completed-card ${activeFilters.status.includes('completed') ? 'active' : ''}`}
+               onClick={() => toggleFilter('status', 'completed')}
                style={{"--percentage": calculatePercentage(statusStats.completed)}}>
             <div className="stat-icon-wrapper">
               <i className="fas fa-check-circle"></i>
@@ -366,6 +668,44 @@ const Tasks = () => {
               </button>
             )}
           </div>
+
+          {user.role === "Global" && (
+            <div className="filter-dropdown">
+              <button 
+                className={`filter-button ${entityFilterDropdownOpen ? 'active' : ''}`}
+                onClick={() => setEntityFilterDropdownOpen(!entityFilterDropdownOpen)}
+              >
+                <i className="fas fa-building"></i>
+                Entities
+                {entityFilters.length > 0 && (
+                  <span className="filter-count">
+                    {entityFilters.length}
+                  </span>
+                )}
+              </button>
+              
+              {entityFilterDropdownOpen && (
+                <div className="filter-menu entity-filter-menu">
+                  <div className="filter-section">
+                    <div className="filter-menu-header">Entities</div>
+                    {getUniqueEntities().map(entityName => (
+                      <div 
+                        key={entityName}
+                        className={`filter-menu-item ${entityFilters.includes(entityName) ? 'active' : ''}`}
+                        onClick={() => toggleEntityFilter(entityName)}
+                      >
+                        <i className="fas fa-building"></i> {entityName}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <button className="clear-filters-btn" onClick={() => setEntityFilters([])}>
+                    Clear Entity Filters
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="filter-container">
             <div className="filter-dropdown">
@@ -452,9 +792,7 @@ const Tasks = () => {
               </button>
             </div>
             
-            <button className="btn-refresh" onClick={() => fetchTasks(user.entity_id)} aria-label="Refresh">
-              <i className="fas fa-sync-alt"></i>
-            </button>
+            {renderRefreshButton()}
           </div>
         </div>
 
@@ -481,147 +819,9 @@ const Tasks = () => {
             )}
           </div>
         ) : viewMode === 'list' ? (
-          <div className="tasks-table-container">
-            <table className="tasks-table">
-              <thead>
-                <tr>
-                  <th>Regulation</th>
-                  <th>Activity</th>
-                  <th>Due Date</th>
-                  <th>Status</th>
-                  <th>Criticality</th>
-                  <th>Preparer</th>
-                  <th>Reviewer</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTasks.map((task) => {
-                  const statusClass = getStatusClass(task.status);
-                  const isDelayed = isTaskDelayed(task);
-                  const criticality = task.criticality ? task.criticality.toLowerCase() : 'medium';
-                  
-                  return (
-                    <tr key={task.id} className={`${statusClass}-row`}>
-                      <td>{task.regulation_name || `Regulation ${task.regulation_id}`}</td>
-                      <td>{task.activity_name || task.activity || `Activity ${task.activity_id}`}</td>
-                      <td className={isDelayed ? 'delayed-text' : ''}>
-                        {formatDate(task.due_on)}
-                      </td>
-                      <td>
-                        <span className={`status-badge ${statusClass}`}>
-                          {task.status || "Yet to Start"}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`criticality-badge criticality-${criticality}`}>
-                          {task.criticality || "Medium"}
-                        </span>
-                      </td>
-                      <td>{getUserName(task.preparation_responsibility)}</td>
-                      <td>{getUserName(task.review_responsibility)}</td>
-                      <td className="actions-cell">
-                        <button
-                          className={`btn-reassign ${task.status === "Completed" ? "btn-disabled" : ""}`}
-                          onClick={() => handleReassignTask(task)}
-                          disabled={task.status === "Completed"}
-                          title={task.status === "Completed" ? "Completed tasks cannot be reassigned" : "Reassign this task"}
-                        >
-                          Reassign
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          renderListView()
         ) : (
-          <div className="tasks-grid">
-            {filteredTasks.map((task) => {
-              const statusClass = getStatusClass(task.status);
-              const isDelayed = isTaskDelayed(task);
-              const criticality = task.criticality ? task.criticality.toLowerCase() : 'medium';
-              
-              return (
-                <div key={task.id} className={`task-card ${statusClass}-top`}>
-                  <div className="card-header">
-                    <div className="header-left">
-                      <div className="regulation-id">{task.regulation_id || task.regulation_name}</div>
-                      <div className="activity-id">{task.activity_id ? `#${task.activity_id}` : ''}</div>
-                    </div>
-                    <div className="header-right">
-                      {isDelayed && <span className="delayed-badge">DELAYED</span>}
-                      <span className={`criticality-badge criticality-${criticality}`}>
-                        {task.criticality || "MEDIUM"}
-                      </span>
-                      <button
-                        className={`btn-reassign-action-top ${task.status === "Completed" ? "btn-disabled" : ""}`}
-                        onClick={() => handleReassignTask(task)}
-                        disabled={task.status === "Completed"}
-                      >
-                        Reassign
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="card-body">
-                    <h3 className="task-title">{task.activity_name || task.activity || `Activity ${task.activity_id}`}</h3>
-                    
-                    <div className="task-details-container">
-                      <div className="detail-item">
-                        <div className="detail-label">DUE DATE</div>
-                        <div className="detail-content">
-                          <div className="detail-icon">
-                            <i className="fas fa-calendar-alt"></i>
-                          </div>
-                          <div className={`detail-value ${isDelayed ? 'delayed-text' : ''}`}>
-                            {formatDate(task.due_on)}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="detail-item">
-                        <div className="detail-label">STATUS</div>
-                        <div className={`detail-content status-container ${statusClass}`}>
-                          <div className="detail-icon">
-                            <i className={`fas fa-circle status-icon ${statusClass}`}></i>
-                          </div>
-                          <div className={`detail-value ${statusClass}`}>
-                            {task.status || "Yet to Start"}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="detail-item">
-                        <div className="detail-label">PREPARER</div>
-                        <div className="detail-content">
-                          <div className="detail-icon">
-                            <i className="fas fa-user-edit"></i>
-                          </div>
-                          <div className="detail-value preparer-value">
-                            {getUserName(task.preparation_responsibility)}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="detail-item">
-                        <div className="detail-label">REVIEWER</div>
-                        <div className="detail-content">
-                          <div className="detail-icon">
-                            <i className="fas fa-user-check"></i>
-                          </div>
-                          <div className="detail-value reviewer-value">
-                            {getUserName(task.review_responsibility)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          renderGridView()
         )}
       </div>
     </div>

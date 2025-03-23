@@ -16,6 +16,8 @@ const AddActivity = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [userRole, setUserRole] = useState(null); // Added for role-based filtering
+  const [userEntityId, setUserEntityId] = useState(null); // Added for entity-based filtering
   const [selectedRegulationId, setSelectedRegulationId] = useState(""); // Stores Regulation ID
   const [activity, setActivity] = useState({
     activity: "",
@@ -41,7 +43,7 @@ const AddActivity = () => {
     "Fortnightly": 26,
   };
 
-  // Fetch Regulations
+  // Fetch Regulations based on user role
   useEffect(() => {
     // Check if user is logged in
     const userData = sessionStorage.getItem("user");
@@ -50,14 +52,58 @@ const AddActivity = () => {
       return;
     }
 
-    fetchRegulations();
+    try {
+      // Parse user data
+      const parsedUserData = JSON.parse(userData);
+      console.log("Session user data:", parsedUserData);
+      
+      // Get user role and entity ID
+      const role = parsedUserData.role || "";
+      setUserRole(role);
+      
+      // Get entity_id - check all possible locations
+      let entityId = null;
+      if (parsedUserData.entity_id) {
+        entityId = parsedUserData.entity_id;
+      } else if (parsedUserData.entityId) {
+        entityId = parsedUserData.entityId;
+      } else if (parsedUserData.entityid) {
+        entityId = parsedUserData.entityid;
+      } else if (parsedUserData.entId) {
+        entityId = parsedUserData.entId;
+      } else if (parsedUserData.entityID) {
+        entityId = parsedUserData.entityID;
+      }
+      
+      setUserEntityId(entityId);
+      
+      // Fetch regulations based on role
+      fetchRegulations(role, entityId);
+      
+    } catch (err) {
+      console.error("Error parsing user data:", err);
+      setError("Invalid user session. Please log in again.");
+      setLoading(false);
+    }
   }, [navigate]);
 
-  const fetchRegulations = async () => {
+  const fetchRegulations = async (role, entityId) => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:5000/regulations");
-      setRegulations(response.data.regulations || []);
+      let response;
+      
+      // For Admin users, fetch only entity-specific regulations
+      if (role === "Admin" && entityId) {
+        console.log("Fetching entity regulations for Admin user");
+        response = await axios.get(`http://localhost:5000/entity_regulations/${entityId}`);
+        setRegulations(response.data.entity_regulations || []);
+      } else {
+        // For Global users, fetch all regulations
+        console.log("Fetching all regulations for Global user");
+        response = await axios.get("http://localhost:5000/regulations");
+        setRegulations(response.data.regulations || []);
+      }
+      
       setLoading(false);
     } catch (err) {
       console.error("Error fetching regulations:", err);
@@ -118,6 +164,12 @@ const AddActivity = () => {
     }
   };
 
+  // Get regulation name from id
+  const getRegulationNameById = (regulationId) => {
+    const regulation = regulations.find(reg => reg.regulation_id === regulationId);
+    return regulation ? regulation.regulation_name : "";
+  };
+
   return (
     <div className="add-activity-container">
       <Navbar />
@@ -125,7 +177,11 @@ const AddActivity = () => {
         <div className="page-header">
           <div className="header-title">
             <h1>Add New Activity</h1>
-            <p>Create a new compliance activity</p>
+            <p>Create a new compliance activity
+              {userRole === "Admin" && (
+                <span className="role-indicator"> (showing regulations for your entity only)</span>
+              )}
+            </p>
           </div>
           <button 
             className="btn-back" 
@@ -178,10 +234,22 @@ const AddActivity = () => {
                         name="regulationName"
                         required
                         onChange={(e) => {
-                          const selectedRegulation = regulations.find(
-                            (reg) => reg.regulation_name === e.target.value
-                          );
-                          setSelectedRegulationId(selectedRegulation ? selectedRegulation.regulation_id : "");
+                          // For Admin users, the regulations data structure is different
+                          if (userRole === "Admin") {
+                            const selectedValue = e.target.value;
+                            // Find the regulation with the matching name
+                            const selectedRegulation = regulations.find(
+                              reg => reg.regulation_name === selectedValue
+                            );
+                            // Set the regulation_id if found
+                            setSelectedRegulationId(selectedRegulation ? selectedRegulation.regulation_id : "");
+                          } else {
+                            // For Global users, use the original logic
+                            const selectedRegulation = regulations.find(
+                              reg => reg.regulation_name === e.target.value
+                            );
+                            setSelectedRegulationId(selectedRegulation ? selectedRegulation.regulation_id : "");
+                          }
                         }}
                       >
                         <option value="">Select Regulation Name</option>

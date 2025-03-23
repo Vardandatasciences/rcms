@@ -22,6 +22,8 @@ const Users = () => {
   const [entities, setEntities] = useState([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [userRole, setUserRole] = useState(null); // Added for role-based filtering
+  const [userEntityId, setUserEntityId] = useState(null); // Added for entity-based filtering
   const [newUser, setNewUser] = useState({
     user_id: "",
     entity_id: "",
@@ -52,21 +54,63 @@ const Users = () => {
       return;
     }
 
-    // Fetch users, entities, and country codes in parallel
-    Promise.all([fetchUsers(), fetchEntities(), fetchCountryCodes()]).catch(err => {
-      console.error("Error in initial data loading:", err);
+    try {
+      // Parse user data
+      const parsedUserData = JSON.parse(userData);
+      
+      // Get user role and entity ID
+      const role = parsedUserData.role || "";
+      setUserRole(role);
+      
+      // Get entity_id - check all possible locations in the user data structure
+      let entityId = null;
+      
+      if (parsedUserData.entity_id) {
+        entityId = parsedUserData.entity_id;
+      } else if (parsedUserData.entityId) {
+        entityId = parsedUserData.entityId;
+      } else if (parsedUserData.entityid) {
+        entityId = parsedUserData.entityid;
+      } else if (parsedUserData.entId) {
+        entityId = parsedUserData.entId;
+      } else if (parsedUserData.entityID) {
+        entityId = parsedUserData.entityID;
+      }
+      
+      setUserEntityId(entityId);
+      
+      // Fetch data based on user role and entity ID
+      Promise.all([fetchUsers(role, entityId), fetchEntities()]).catch(err => {
+        console.error("Error in initial data loading:", err);
+        setLoading(false);
+      });
+    } catch (err) {
+      console.error("Error parsing user data:", err);
+      setError("Invalid user session. Please log in again.");
       setLoading(false);
-    });
+    }
   }, [navigate]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (role, entityId) => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:5000/users");
-      const usersData = response.data.users || [];
-      setUsers(usersData);
-      setFilteredUsers(usersData);
-      return usersData;
+      let response;
+
+      console.log("Fetching users for role: " + role + " and entityId: " + entityId);
+      
+      // For Admin users, fetch only users for their entity
+      if (role === "Global") {
+        console.log("Fetching all users for Global user");
+        response = await axios.get("http://localhost:5000/users");
+      } else {
+        // For Global users, fetch all users
+        
+        console.log(`Fetching users for entity: ${entityId}`);
+        response = await axios.get(`http://localhost:5000/entity_users_admin/${entityId}`);
+      }
+      
+      setUsers(response.data.users || []);
+      return response.data.users;
     } catch (err) {
       console.error("Error fetching users:", err);
       setError("Failed to fetch users. Please try again later.");
@@ -181,7 +225,8 @@ const Users = () => {
       setTimeout(() => {
         setShowAddForm(false);
         setSuccessMessage("");
-    fetchUsers();
+        // Refresh users with the current role and entity ID
+        fetchUsers(userRole, userEntityId);
       }, 2000);
     } catch (error) {
       if (error.response && error.response.status === 409) {
@@ -226,7 +271,8 @@ const Users = () => {
         setShowEditForm(false);
         setCurrentUser(null);
         setSuccessMessage("");
-        fetchUsers();
+        // Refresh users with the current role and entity ID
+        fetchUsers(userRole, userEntityId);
       }, 2000);
     } catch (error) {
       setErrorMessage("Error updating user. Please try again.");
@@ -239,7 +285,7 @@ const Users = () => {
       try {
         await axios.delete(`http://localhost:5000/delete_user/${userId}`);
         // Refresh the users list
-        fetchUsers();
+        fetchUsers(userRole, userEntityId);
       } catch (err) {
         console.error("Error deleting user:", err);
         setError("Failed to delete user. Please try again later.");
@@ -263,6 +309,14 @@ const Users = () => {
       password: "",
       role: ""
     });
+    
+    // If user is Admin, pre-select their entity in the add form
+    if (userRole === "Admin" && userEntityId && !showAddForm) {
+      setNewUser(prev => ({
+        ...prev,
+        entity_id: userEntityId
+      }));
+    }
   };
 
   const cancelEdit = () => {
@@ -297,7 +351,11 @@ const Users = () => {
       <Navbar />
       <div className="users-content">
         <h1>Users Management</h1>
-        <p>View and manage system users</p>
+        <p>
+          {userRole === "Admin" 
+            ? "View and manage users for your entity" 
+            : "View and manage all system users"}
+        </p>
 
         <div className="users-actions">
           <button className="btn-add-user" onClick={toggleAddForm}>
@@ -342,6 +400,7 @@ const Users = () => {
                     value={newUser.entity_id}
                     onChange={handleInputChange}
                     required
+                    disabled={userRole === "Admin"} // Disable for Admin users
                   >
                     <option value="">Select Entity</option>
                     {entities.map((entity) => (
@@ -350,6 +409,11 @@ const Users = () => {
                       </option>
                     ))}
                   </select>
+                  {userRole === "Admin" && (
+                    <small className="form-text text-muted">
+                      Entity is auto-selected for Admin users.
+                    </small>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -477,6 +541,7 @@ const Users = () => {
                     value={currentUser.entity_id}
                     onChange={handleInputChange}
                     required
+                    disabled={userRole === "Admin"} // Disable for Admin users
                   >
                     {entities.map((entity) => (
                       <option key={entity.entity_id} value={entity.entity_id}>
@@ -484,6 +549,11 @@ const Users = () => {
                       </option>
                     ))}
                   </select>
+                  {userRole === "Admin" && (
+                    <small className="form-text text-muted">
+                      Entity cannot be changed by Admin users.
+                    </small>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -645,9 +715,11 @@ const Users = () => {
               <div className="error-message">{error}</div>
             ) : filteredUsers.length === 0 ? (
               <div className="no-users">
-                {users.length === 0 ? 
-                  "No users found. Add a new user to get started." : 
-                  "No users match your search criteria."}
+                <p>
+                  {userRole === "Admin" 
+                    ? "No users found for your entity. Add a new user to get started." 
+                    : "No users found. Add a new user to get started."}
+                </p>
               </div>
             ) : (
               <div className="user-cards-container">
