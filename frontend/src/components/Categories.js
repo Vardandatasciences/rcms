@@ -190,12 +190,12 @@ const Categories = () => {
                   </div>
                   
                   <div className="category-footer">
-                    <button
+                    {/* <button
                       className="category-btn btn-edit"
                       title="Edit Category"
                     >
                       <FaEdit />
-                    </button>
+                    </button> */}
                     <button
                       className="category-btn btn-delete"
                       onClick={() => handleDeleteCategory(category.category_id)}

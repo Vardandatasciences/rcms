@@ -1,7 +1,9 @@
 from flask import Blueprint, jsonify, request
 from models import db
-from models.models import RegulationMaster
+from models.models import RegulationMaster, EntityRegulation, Category
 import traceback
+from sqlalchemy.orm import aliased
+
 
 regulations_bp = Blueprint('regulations', __name__)
 
@@ -104,22 +106,7 @@ def edit_regulation(regulation_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@regulations_bp.route('/delete_regulation/<string:regulation_id>', methods=['DELETE'])
-def delete_regulation(regulation_id):
-    try:
-        regulation = RegulationMaster.query.get(regulation_id)
-        if not regulation:
-            return jsonify({"error": "Regulation not found"}), 404
 
-        # Instead of deleting, mark as obsolete
-        regulation.obsolete_current = "O"
-        db.session.commit()
-
-        return jsonify({"message": "Regulation deleted successfully"}), 200
-
-    except Exception as e:
-        print("Error:", str(e))
-        return jsonify({"error": str(e)}), 500
 
 @regulations_bp.route('/regulation_details/<string:regulation_id>', methods=['GET'])
 def get_regulation_details(regulation_id):
@@ -148,3 +135,79 @@ def get_regulation_details(regulation_id):
         print("Error:", str(e))
         print(traceback.format_exc())  # Print full traceback for debugging
         return jsonify({"error": str(e)}), 500 
+    
+
+
+
+@regulations_bp.route('/entity_regulations/<string:entity_id>', methods=['GET'])
+def get_entity_regulations(entity_id):
+    try:
+        if not entity_id:
+            return jsonify({"error": "Entity ID is required"}), 400
+            
+        # Query regulations assigned to the entity
+        EntityRegulationAlias = aliased(EntityRegulation)
+        RegulationMasterAlias = aliased(RegulationMaster)
+        CategoryAlias = aliased(Category)
+
+        entity_regulations = db.session.query(
+                RegulationMasterAlias.regulation_id,
+                RegulationMasterAlias.regulation_name,
+                RegulationMasterAlias.regulatory_body,
+                CategoryAlias.category_type,
+                RegulationMasterAlias.internal_external,  # Fetch internal/external
+                RegulationMasterAlias.national_international,  # Fetch national/international
+                RegulationMasterAlias.mandatory_optional  # Fetch mandatory/optional
+            )\
+            .join(EntityRegulationAlias, RegulationMasterAlias.regulation_id == EntityRegulationAlias.regulation_id)\
+            .join(CategoryAlias, RegulationMasterAlias.category_id == CategoryAlias.category_id)\
+            .filter(
+                EntityRegulationAlias.entity_id == entity_id,
+                (EntityRegulationAlias.obsolete_current != 'O') | (EntityRegulationAlias.obsolete_current.is_(None))
+            )\
+            .all()
+
+        print(entity_regulations)
+        
+        # Mapping the abbreviations to full text
+        def map_values(value, mapping):
+            return mapping.get(value, "Unknown")  # Default to "Unknown" if value not found
+        
+        internal_external_map = {"I": "Internal", "E": "External"}
+        national_international_map = {"N": "National", "I": "International"}
+        mandatory_optional_map = {"M": "Mandatory", "O": "Optional"}
+
+        regulations_list = [{
+            "regulation_id": reg_id,
+            "regulation_name": reg_name,
+            "regulatory_body": regulatory_body,
+            "category_type": category_type,
+            "internal_external": map_values(internal_external, internal_external_map),  # Convert abbreviation
+            "national_international": map_values(national_international, national_international_map),  # Convert abbreviation
+            "mandatory_optional": map_values(mandatory_optional, mandatory_optional_map)  # Convert abbreviation
+        } for reg_id, reg_name, regulatory_body, category_type, internal_external, national_international, mandatory_optional in entity_regulations]
+
+        print(regulations_list)
+        
+        return jsonify({"entity_regulations": regulations_list}), 200
+        
+    except Exception as e:
+        print(f"Error fetching entity regulations: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@regulations_bp.route('/delete_regulation/<string:regulation_id>', methods=['DELETE'])
+def delete_regulation(regulation_id):
+    try:
+        regulation = RegulationMaster.query.get(regulation_id)
+        if not regulation:
+            return jsonify({"error": "Regulation not found"}), 404
+
+        # Instead of deleting, mark as obsolete
+        regulation.obsolete_current = "O"
+        db.session.commit()
+
+        return jsonify({"message": "Regulation deleted successfully"}), 200
+
+    except Exception as e:
+        print("Error:", str(e))
+        return jsonify({"error": str(e)}), 500

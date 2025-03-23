@@ -22,9 +22,13 @@ const AssignActivity = () => {
   });
 
   useEffect(() => {
+    console.log("AssignActivity component mounted");
+    console.log("Params:", { regulationId, activityId });
+    
     // Check if user is logged in
     const storedUserData = sessionStorage.getItem('user');
     if (!storedUserData) {
+      console.error("No user data found in session storage");
       navigate('/login');
       return;
     }
@@ -33,6 +37,16 @@ const AssignActivity = () => {
       // Parse user data
       const parsedUserData = JSON.parse(storedUserData);
       console.log("Session user data:", parsedUserData);
+      
+      // Check user role - prevent Global users from accessing this page
+      const userRole = parsedUserData.role || "";
+      if (userRole !== "Admin") {
+        console.error("Unauthorized access attempt by non-Admin user");
+        setError("Only Admin users can assign activities.");
+        setLoading(false);
+        return;
+      }
+      
       setUserData(parsedUserData);
       
       // Get entity_id - check all possible locations in the user data structure
