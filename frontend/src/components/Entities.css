@@ -124,10 +124,61 @@
 .entities-actions {
   margin-bottom: 1.5rem;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   animation: fadeInRight 0.7s ease-out 0.5s forwards;
   opacity: 0;
   transform: translateX(20px);
+  width: 100%;
+}
+
+/* Create a new container for all top controls */
+.top-controls-container {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Adjust search and filter container */
+.search-filter-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-grow: 1;
+}
+
+.search-box {
+  position: relative;
+  flex-grow: 1;
+  max-width: 500px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.7rem 1rem 0.7rem 2.8rem;
+  border: 1px solid var(--gray-300);
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background-color: white;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--teal-primary);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.1);
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray-500);
+  font-size: 1rem;
 }
 
 @keyframes fadeInRight {
@@ -265,77 +316,61 @@
   border-color: var(--pink-primary);
 }
 
-/* Match icon colors to card theme */
-.entity-card:nth-child(5n+1) .entity-info p svg,
-.entity-card:nth-child(5n+1) .entity-info p i {
+/* Enhance icons within entity info */
+.entity-info p i, 
+.entity-info p svg {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--gray-100);
+  border-radius: 50%;
+  padding: 6px;
+  transition: all 0.3s ease;
+}
+
+/* Style icons based on card color schemes */
+.entity-card:nth-child(5n+1) .entity-info p i,
+.entity-card:nth-child(5n+1) .entity-info p svg {
   color: var(--teal-primary);
-}
-
-.entity-card:nth-child(5n+2) .entity-info p svg,
-.entity-card:nth-child(5n+2) .entity-info p i {
-  color: var(--purple-primary);
-}
-
-.entity-card:nth-child(5n+3) .entity-info p svg,
-.entity-card:nth-child(5n+3) .entity-info p i {
-  color: var(--blue-primary);
-}
-
-.entity-card:nth-child(5n+4) .entity-info p svg,
-.entity-card:nth-child(5n+4) .entity-info p i {
-  color: var(--orange-primary);
-}
-
-.entity-card:nth-child(5n+5) .entity-info p svg,
-.entity-card:nth-child(5n+5) .entity-info p i {
-  color: var(--pink-primary);
-}
-
-/* Match border-left hover color to card theme */
-.entity-card:nth-child(5n+1) .entity-info p:hover {
-  border-left-color: var(--teal-primary);
   background-color: var(--teal-bg);
 }
 
-.entity-card:nth-child(5n+2) .entity-info p:hover {
-  border-left-color: var(--purple-primary);
+.entity-card:nth-child(5n+2) .entity-info p i,
+.entity-card:nth-child(5n+2) .entity-info p svg {
+  color: var(--purple-primary);
   background-color: var(--purple-bg);
 }
 
-.entity-card:nth-child(5n+3) .entity-info p:hover {
-  border-left-color: var(--blue-primary);
+.entity-card:nth-child(5n+3) .entity-info p i,
+.entity-card:nth-child(5n+3) .entity-info p svg {
+  color: var(--blue-primary);
   background-color: var(--blue-bg);
 }
 
-.entity-card:nth-child(5n+4) .entity-info p:hover {
-  border-left-color: var(--orange-primary);
+.entity-card:nth-child(5n+4) .entity-info p i,
+.entity-card:nth-child(5n+4) .entity-info p svg {
+  color: var(--orange-primary);
   background-color: var(--orange-bg);
 }
 
-.entity-card:nth-child(5n+5) .entity-info p:hover {
-  border-left-color: var(--pink-primary);
+.entity-card:nth-child(5n+5) .entity-info p i,
+.entity-card:nth-child(5n+5) .entity-info p svg {
+  color: var(--pink-primary);
   background-color: var(--pink-bg);
 }
 
-/* Match actions gradient to card theme */
-.entity-card:nth-child(5n+1) .entity-card-actions::before {
-  background: linear-gradient(to right, var(--teal-primary), transparent);
+/* Add hover animation */
+.entity-info p:hover i,
+.entity-info p:hover svg {
+  transform: scale(1.15);
 }
 
-.entity-card:nth-child(5n+2) .entity-card-actions::before {
-  background: linear-gradient(to right, var(--purple-primary), transparent);
-}
-
-.entity-card:nth-child(5n+3) .entity-card-actions::before {
-  background: linear-gradient(to right, var(--blue-primary), transparent);
-}
-
-.entity-card:nth-child(5n+4) .entity-card-actions::before {
-  background: linear-gradient(to right, var(--orange-primary), transparent);
-}
-
-.entity-card:nth-child(5n+5) .entity-card-actions::before {
-  background: linear-gradient(to right, var(--pink-primary), transparent);
+/* Style the location indicator in the header */
+.entity-location i,
+.entity-location svg {
+  margin-right: 6px;
 }
 
 .entity-card-header {
@@ -439,10 +474,6 @@
   gap: 0.5rem;
 }
 
-.entity-location i {
-  font-size: 0.8rem;
-}
-
 .entity-card-body {
   padding: 1.5rem;
   flex-grow: 1;
@@ -499,15 +530,6 @@
   }
 }
 
-.entity-info p i {
-  font-size: 1.1rem;
-  transition: all var(--transition-normal);
-}
-
-.entity-info p:hover i {
-  transform: scale(1.2);
-}
-
 .info-label {
   font-weight: 600;
   color: var(--gray-700);
@@ -542,35 +564,56 @@
   transform: scaleX(1);
 }
 
+/* Style the card action buttons to match the image */
 .btn-edit, 
 .btn-delete {
-  width: 40px;
-  height: 40px;
-  border: none;
-  border-radius: 12px;
+  width: 45px;
+  height: 45px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
 }
 
 .btn-edit {
-  background: var(--purple-primary);
-  color: white;
+  background-color: #e8f4ff;
+  color: #3b82f6;
+  border: none;
 }
 
 .btn-delete {
-  background: var(--danger-color);
-  color: white;
+  background-color: #ffeeee;
+  color: #ef4444;
+  border: none;
 }
 
-.btn-edit:hover,
+.btn-edit:hover {
+  background-color: #d1e7ff;
+}
+
 .btn-delete:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  background-color: #ffdddd;
+}
+
+.btn-edit svg, 
+.btn-delete svg {
+  font-size: 1.2rem;
+}
+
+/* Ensure Font Awesome icons are visible */
+.fas {
+  font-family: 'Font Awesome 5 Free', 'Font Awesome 5 Brands';
+  font-weight: 900;
+}
+
+.btn-edit i.fas.fa-edit::before {
+  content: "\f044"; /* Font Awesome edit icon */
+}
+
+.btn-delete i.fas.fa-trash-alt::before {
+  content: "\f2ed"; /* Font Awesome trash icon */
 }
 
 /* Loading animation */
@@ -820,5 +863,72 @@
 
 .phone-input {
   width: 60%;
+}
+
+/* Filter button styling */
+.filter-toggle-btn {
+  background: linear-gradient(to right, var(--gray-500), var(--gray-600));
+  color: white;
+  padding: 0.75rem 1.2rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.filter-toggle-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.15);
+  background: linear-gradient(to right, var(--gray-600), var(--gray-700));
+}
+
+.filter-toggle-btn svg {
+  font-size: 0.9rem;
+}
+
+/* Add visual indicator for entity type/status */
+.entity-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-right: 8px;
+  position: relative;
+  backdrop-filter: blur(4px);
+}
+
+/* Style badges with unique colors */
+.entity-card:nth-child(5n+1) .entity-badge {
+  background-color: rgba(45, 212, 191, 0.15);
+  color: var(--teal-dark);
+}
+
+.entity-card:nth-child(5n+2) .entity-badge {
+  background-color: rgba(168, 85, 247, 0.15);
+  color: var(--purple-dark);
+}
+
+.entity-card:nth-child(5n+3) .entity-badge {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: var(--blue-dark);
+}
+
+.entity-card:nth-child(5n+4) .entity-badge {
+  background-color: rgba(249, 115, 22, 0.15);
+  color: var(--orange-dark);
+}
+
+.entity-card:nth-child(5n+5) .entity-badge {
+  background-color: rgba(236, 72, 153, 0.15);
+  color: var(--pink-dark);
 }
   

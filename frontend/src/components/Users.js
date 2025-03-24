@@ -246,12 +246,12 @@ const Users = () => {
     <div className="users-container">
       <Navbar />
       <div className="users-content">
-        <h1>Users Management</h1>
+        {/* <h1>Users Management</h1>
         <p>
           {userRole === "Admin" 
             ? "View and manage users for your entity" 
             : "View and manage all system users"}
-        </p>
+        </p> */}
 
         <div className="users-actions">
           <button className="btn-add-user" onClick={toggleAddForm}>

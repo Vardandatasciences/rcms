@@ -82,10 +82,10 @@ const Categories = () => {
       <Navbar />
       <div className="categories-content">
         <div className="categories-header">
-          <div className="header-title">
+          {/* <div className="header-title">
             <h1>Categories Management</h1>
             <p>View and manage regulation categories</p>
-          </div>
+          </div> */}
         </div>
 
         <div className="filter-tabs">
