@@ -34,10 +34,7 @@ const Users = () => {
     role: ""
   });
   const navigate = useNavigate();
-<<<<<<< HEAD
-=======
  
->>>>>>> 6cb8075a6042d95cdfe2b6a1cfbdecdac54e84cf
   useEffect(() => {
     // Check if user is logged in
     const userData = sessionStorage.getItem("user");
@@ -122,10 +119,7 @@ const Users = () => {
       throw err;
     }
   };
-<<<<<<< HEAD
-=======
  
->>>>>>> 6cb8075a6042d95cdfe2b6a1cfbdecdac54e84cf
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (showEditForm) {
@@ -134,10 +128,7 @@ const Users = () => {
       setNewUser({ ...newUser, [name]: value });
     }
   };
-<<<<<<< HEAD
-=======
  
->>>>>>> 6cb8075a6042d95cdfe2b6a1cfbdecdac54e84cf
   const handleAddUser = async (e) => {
     e.preventDefault();
     setErrorMessage("");
