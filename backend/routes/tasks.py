@@ -4,9 +4,196 @@ from models.models import EntityRegulationTasks, RegulationMaster, ActivityMaste
 from sqlalchemy import or_
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-import traceback,os
+import traceback
+import requests
+from msal import ConfidentialClientApplication
+import json
+import pytz
+import os
+
 
 tasks_bp = Blueprint('tasks', __name__)
+
+# Microsoft Graph API Configuration
+CLIENT_ID = '1a9a4d27-4a49-400d-9bfb-a6cfa08f1b15'
+CLIENT_SECRET = 'YUI8Q~svY7gzjgY6uGqpVKV1gTtbiYhj5fLPEdms'
+TENANT_ID = 'aa7c8c45-41a3-4453-bc9a-3adfe8ff5fb6'
+AUTHORITY = f'https://login.microsoftonline.com/{TENANT_ID}'
+REDIRECT_URI = 'http://localhost:5000/getAToken'
+SCOPES = ['https://graph.microsoft.com/.default']
+ 
+def get_access_token():
+    try:
+        app = ConfidentialClientApplication(
+            CLIENT_ID,
+            authority=AUTHORITY,
+            client_credential=CLIENT_SECRET
+        )
+       
+        result = app.acquire_token_silent(SCOPES, account=None)
+       
+        if not result:
+            result = app.acquire_token_for_client(scopes=SCOPES)
+           
+        if "access_token" in result:
+            return result['access_token']
+        else:
+            print(f"Error getting token: {result.get('error')}")
+            print(f"Error description: {result.get('error_description')}")
+            return None
+           
+    except Exception as e:
+        print(f"Error in get_access_token: {str(e)}")
+        return None
+ 
+def create_calendar_invite(task_details, is_reviewer=False):
+    try:
+        cal = Calendar()
+        cal.add('prodid', '-//RCMS Task Calendar//EN')
+        cal.add('version', '2.0')
+        cal.add('method', 'REQUEST')
+       
+        event = Event()
+        event.add('summary', f"RCMS Task: {task_details['activity_name']}")
+        event.add('description', f"""
+        Regulation: {task_details['regulation_name']}
+        Role: {'Reviewer' if is_reviewer else 'Assignee'}
+        {'Assignee: ' + task_details['assignee_name'] if is_reviewer else 'Reviewer: ' + task_details['reviewer_name']}
+       
+        This is an automated calendar entry from RCMS.
+        """)
+       
+        # Convert due date string to datetime
+        due_date = datetime.strptime(task_details['due_on'], '%Y-%m-%d')
+        event.add('dtstart', due_date.replace(hour=9, minute=0, tzinfo=pytz.UTC))
+        event.add('dtend', due_date.replace(hour=17, minute=0, tzinfo=pytz.UTC))
+        event.add('dtstamp', datetime.now(pytz.UTC))
+       
+        # Add unique identifier
+        event['uid'] = f"RCMS-TASK-{task_details.get('task_id', '')}-{is_reviewer}-{due_date.strftime('%Y%m%d')}"
+       
+        # Add status and priority
+        event.add('status', 'CONFIRMED')
+        event.add('priority', 5)
+       
+        # Add organizer
+        event.add('organizer', f"mailto:{SMTP_USERNAME}")
+       
+        cal.add_component(event)
+        return cal
+    except Exception as e:
+        print(f"Error creating calendar invite: {str(e)}")
+        return None
+ 
+def send_email_notification(recipient_email, recipient_name, task_details, is_reviewer=False):
+    try:
+        # Get access token
+        access_token = get_access_token()
+        if not access_token:
+            print("Failed to get access token")
+            return False
+ 
+        # Prepare the email message
+        role = "Reviewer" if is_reviewer else "Assignee"
+        action = "reassigned" if task_details.get('is_reassignment') else "assigned"
+       
+        # Create HTML body
+        html_body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; background-color: #f9fafb; margin: 0; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h2 style="color: #2563eb; margin-bottom: 20px; text-align: center;">RCMS Task {action.title()}</h2>
+               
+                <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin: 0 0 15px 0;"><strong>Dear {recipient_name},</strong></p>
+                    <p style="margin: 0 0 15px 0;">You have been {action} as the {role.lower()} for the following task:</p>
+                   
+                    <div style="background-color: #ffffff; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                        <p style="margin: 8px 0;"><strong>Activity:</strong> {task_details['activity_name']}</p>
+                        <p style="margin: 8px 0;"><strong>Regulation:</strong> {task_details['regulation_name']}</p>
+                        <p style="margin: 8px 0;"><strong>Due Date:</strong> {task_details['due_on']}</p>
+                        <p style="margin: 8px 0;"><strong>{'Assignee' if is_reviewer else 'Reviewer'}:</strong> {task_details['assignee_name'] if is_reviewer else task_details['reviewer_name']}</p>
+                    </div>
+                   
+                    <p style="margin: 15px 0 0 0;">{
+                        "Please review this task once it's completed by the assignee." if is_reviewer else
+                        "Please complete this task before the due date."
+                    }</p>
+                </div>
+               
+                <div style="text-align: center; margin-top: 20px;">
+                    <p style="color: #4b5563;">You can access the task through the RCMS portal.</p>
+                </div>
+               
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+                    <p style="color: #4b5563; font-size: 14px;">Best regards,<br>RCMS Team</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+ 
+        # Prepare the email request using application permissions
+        email_data = {
+            "message": {
+                "subject": f"RCMS Task {role} {action.title()}: {task_details['activity_name']}",
+                "body": {
+                    "contentType": "HTML",
+                    "content": html_body
+                },
+                "toRecipients": [
+                    {
+                        "emailAddress": {
+                            "address": recipient_email
+                        }
+                    }
+                ]
+            },
+            "saveToSentItems": "true"
+        }
+ 
+        # Send the email using Microsoft Graph API with application permissions
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        }
+ 
+        # Use the users endpoint directly with the recipient's email
+        response = requests.post(
+            f'https://graph.microsoft.com/v1.0/users/{recipient_email}/sendMail',
+            headers=headers,
+            json=email_data
+        )
+ 
+        if response.status_code in [202, 200]:
+            print(f"Email sent successfully to {recipient_email}")
+            return True
+        else:
+            print(f"Failed to send email. Status code: {response.status_code}")
+            print(f"Response: {response.text}")
+           
+            # Try sending through shared mailbox if available
+            shared_mailbox = "noreply@yourdomain.com"  # Replace with your actual shared mailbox
+            alternative_response = requests.post(
+                f'https://graph.microsoft.com/v1.0/users/{shared_mailbox}/sendMail',
+                headers=headers,
+                json=email_data
+            )
+           
+            if alternative_response.status_code in [202, 200]:
+                print(f"Email sent successfully using shared mailbox to {recipient_email}")
+                return True
+            else:
+                print(f"Failed to send email using shared mailbox. Status code: {alternative_response.status_code}")
+                print(f"Response: {alternative_response.text}")
+                return False
+ 
+    except Exception as e:
+        print(f"Error sending email: {str(e)}")
+        traceback.print_exc()
+        return False
+# Sign in to your account
+ 
 
 # @tasks_bp.route('/entity_regulation_tasks/<string:entity_id>', methods=['GET'])
 # def get_entity_regulation_tasks(entity_id):
@@ -242,63 +429,109 @@ def reassign_task():
         # Validate required fields
         if not all([task_id, entity_id, regulation_id, activity_id, preparation_responsibility, review_responsibility]):
             return jsonify({'error': 'Missing required fields'}), 400
-        
+       
         # Get user ID from session or use a default value
         user_id = session.get('user_id', 'SYSTEM')
-        
+       
         # Find the task using SQLAlchemy ORM
         task = EntityRegulationTasks.query.filter_by(
-            id=task_id, 
+            id=task_id,
             entity_id=entity_id,
             regulation_id=regulation_id,
             activity_id=activity_id
         ).first()
-        
+       
         if not task:
             return jsonify({'error': 'Task not found'}), 404
-        
+       
         # Check if the task status is "Completed" - prevent reassignment
         if task.status == "Completed":
             return jsonify({'error': 'Completed tasks cannot be reassigned'}), 403
-        
+       
         # Update the task
         task.preparation_responsibility = preparation_responsibility
         task.review_responsibility = review_responsibility
         task.last_updated_by = user_id
         task.last_updated_on = datetime.now()
-        
-        db.session.commit()
-        
-        # Get user details for email notification (optional)
+       
+        # Get user details for notifications
         prep_user = Users.query.filter_by(user_id=preparation_responsibility).first()
         review_user = Users.query.filter_by(user_id=review_responsibility).first()
-        
-        # Get task details for email (optional)
-        task_details = db.session.query(
-            RegulationMaster.regulation_name,
-            ActivityMaster.activity,
-            EntityRegulationTasks.due_on
-        ).join(
-            RegulationMaster, 
-            EntityRegulationTasks.regulation_id == RegulationMaster.regulation_id
-        ).join(
-            ActivityMaster, 
-            (EntityRegulationTasks.regulation_id == ActivityMaster.regulation_id) & 
-            (EntityRegulationTasks.activity_id == ActivityMaster.activity_id)
-        ).filter(
-            EntityRegulationTasks.id == task_id
+       
+        # Get activity and regulation names from the database
+        activity = ActivityMaster.query.filter_by(
+            regulation_id=regulation_id,
+            activity_id=activity_id
         ).first()
-        
-        # Send email notifications (implement your email sending logic here)
-        # This is a placeholder for email notification logic
-        
-        return jsonify({'message': 'Task reassigned successfully'}), 200
-        
+       
+        regulation = RegulationMaster.query.filter_by(
+            regulation_id=regulation_id
+        ).first()
+       
+        # Get task details with reassignment flag
+        task_details = {
+            'task_id': task_id,
+            'activity_name': activity.activity if activity else 'Unknown Activity',
+            'regulation_name': regulation.regulation_name if regulation else 'Unknown Regulation',
+            'due_on': task.due_on.strftime('%Y-%m-%d'),
+            'assignee_name': prep_user.user_name if prep_user else 'Unknown',
+            'reviewer_name': review_user.user_name if review_user else 'Unknown',
+            'is_reassignment': True  # Add flag to indicate this is a reassignment
+        }
+       
+        notifications_sent = {'assignee': False, 'reviewer': False}
+        notification_errors = []
+       
+        # Send notifications if users are found and have email addresses
+        if prep_user and hasattr(prep_user, 'email_id') and prep_user.email_id:
+            try:
+                notifications_sent['assignee'] = send_email_notification(
+                    prep_user.email_id,
+                    prep_user.user_name,
+                    task_details,
+                    is_reviewer=False
+                )
+                if not notifications_sent['assignee']:
+                    notification_errors.append(f"Failed to send email to assignee: {prep_user.email_id}")
+            except Exception as e:
+                notification_errors.append(f"Error sending assignee email: {str(e)}")
+        else:
+            notification_errors.append(f"Assignee email not found for user: {preparation_responsibility}")
+ 
+        if review_user and hasattr(review_user, 'email_id') and review_user.email_id:
+            try:
+                notifications_sent['reviewer'] = send_email_notification(
+                    review_user.email_id,
+                    review_user.user_name,
+                    task_details,
+                    is_reviewer=True
+                )
+                if not notifications_sent['reviewer']:
+                    notification_errors.append(f"Failed to send email to reviewer: {review_user.email_id}")
+            except Exception as e:
+                notification_errors.append(f"Error sending reviewer email: {str(e)}")
+        else:
+            notification_errors.append(f"Reviewer email not found for user: {review_responsibility}")
+       
+        db.session.commit()
+       
+        response_data = {
+            'message': 'Task reassigned successfully',
+            'notifications_sent': notifications_sent,
+            'notification_errors': notification_errors if notification_errors else None,
+            'task_details': task_details
+        }
+       
+        return jsonify(response_data), 200
+       
     except Exception as e:
         db.session.rollback()
         print(f"Error in reassign_task: {str(e)}")
         traceback.print_exc()
-        return jsonify({'error': 'An error occurred while reassigning the task'}), 500
+        return jsonify({'error': str(e)}), 500
+    
+
+
 
 @tasks_bp.route('/task/<int:task_id>', methods=['GET'])
 def get_task_details(task_id):
