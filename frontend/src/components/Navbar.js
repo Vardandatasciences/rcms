@@ -146,14 +146,19 @@ const Navbar = () => {
               </Link>
             </li>
 
-            {/* Analysis - Visible to all roles */}
-            <li className="nav-item">
-              <Link to="/analysis" className={`nav-link ${isActive('/analysis') ? 'active' : ''}`}>
-                <FaChartLine className="nav-icon" />
-                <span className="nav-text">Analysis</span>
-                {isActive('/analysis') && <div className="nav-indicator"></div>}
-              </Link>
-            </li>
+            {/* Analysis - Only visible to Admin role */}
+            {user.role === 'Admin' && (
+              <li className="nav-item">
+                <Link 
+                  to="/analysis"
+                  className={`nav-link ${isActive('/analysis') ? 'active' : ''}`}
+                >
+                  <FaChartLine className="nav-icon" />
+                  <span className="nav-text">Analysis</span>
+                  {isActive('/analysis') && <div className="nav-indicator"></div>}
+                </Link>
+              </li>
+            )}
 
             {/* Holidays - Only visible to Admin role */}
             {user.role === 'Admin' && (

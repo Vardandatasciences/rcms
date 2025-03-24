@@ -7,3 +7,6 @@ python-dateutil
 SQLAlchemy
 Werkzeug
 cryptography
+msal==1.24.1
+schedule==1.2.0
+requests==2.31.0

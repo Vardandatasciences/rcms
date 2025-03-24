@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Dashboard</title>
+</head>
+<body>
+    <h1>Analysis Dashboard</h1>
+    <div id="dashboard-container"></div>
+    
+    <!-- Test connection to backend -->
+    <script>
+        fetch('http://localhost:5000/api/task-summary/KOTH001')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Data received:', data);
+                document.getElementById('dashboard-container').innerHTML = 
+                    `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('dashboard-container').innerHTML = 
+                    `<p style="color: red;">Error connecting to backend: ${error.message}</p>`;
+            });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,3 @@
+2025-03-21 15:48:41,637 - __main__ - INFO - Starting reminder scheduler
+2025-03-21 15:48:41,637 - __main__ - INFO - Starting task reminder check
+2025-03-21 15:48:45,723 - __main__ - ERROR - Error in check_task_reminders: HTTPConnectionPool(host='localhost', port=5000): Max retries exceeded with url: /schedule_task_reminders (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000267EE9F2410>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))

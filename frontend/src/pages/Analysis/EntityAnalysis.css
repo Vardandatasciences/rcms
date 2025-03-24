@@ -1,0 +1,11 @@
+.analysis-page {
+    padding: 20px;
+    margin-top: 60px; /* Space for navbar */
+}
+
+.page-title {
+    color: #333;
+    font-size: 24px;
+    margin-bottom: 20px;
+    padding: 0 20px;
+} 

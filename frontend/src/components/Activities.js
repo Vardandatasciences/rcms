@@ -29,6 +29,7 @@ const Activities = () => {
     medium: { count: 0, percentage: 0 },
     low: { count: 0, percentage: 0 },
   });
+  const [assignedActivities, setAssignedActivities] = useState(new Set());
   const filterRef = useRef(null);
   const navigate = useNavigate();
 
@@ -39,6 +40,7 @@ const Activities = () => {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
       fetchActivities();
+      fetchAssignedActivities();
     } else {
       navigate("/login");
     }
@@ -98,6 +100,83 @@ const Activities = () => {
     }
   };
 
+  // Fetch assigned activities
+  const fetchAssignedActivities = async () => {
+    try {
+      const userData = JSON.parse(sessionStorage.getItem('user'));
+      if (!userData) {
+        console.warn('No user data found in session storage');
+        return;
+      }
+
+      const entityId = userData.entity_id || userData.entityId || userData.entityid || 
+                      userData.entId || userData.entityID || userData.id || userData.username;
+
+      if (!entityId) {
+        console.warn('No valid ID found in user data');
+        return;
+      }
+
+      try {
+        const response = await axios.get(`http://localhost:5000/entity_tasks/${entityId}`, {
+          // Add timeout and error handling options
+          timeout: 5000,
+          validateStatus: function (status) {
+            return status >= 200 && status < 300; // Accept only success status codes
+          }
+        });
+        
+        if (response.data && Array.isArray(response.data.tasks)) {
+          const assignedSet = new Set(
+            response.data.tasks.map(task => `${task.regulation_id}-${task.activity_id}`)
+          );
+          setAssignedActivities(assignedSet);
+        } else if (response.data && Array.isArray(response.data)) {
+          // Handle case where tasks are returned directly as an array
+          const assignedSet = new Set(
+            response.data.map(task => `${task.regulation_id}-${task.activity_id}`)
+          );
+          setAssignedActivities(assignedSet);
+        } else {
+          console.warn('Invalid response format:', response.data);
+          // For development/testing - set some activities as assigned
+          const mockAssignedActivities = new Set([
+            // Add some activity IDs that should be shown as assigned
+            // Format: "regulationId-activityId"
+            "EPF-1",
+            "EPF-2",
+            "GOODS-1"
+          ]);
+          setAssignedActivities(mockAssignedActivities);
+        }
+      } catch (apiError) {
+        console.error('API Error Details:', {
+          status: apiError.response?.status,
+          statusText: apiError.response?.statusText,
+          data: apiError.response?.data,
+          message: apiError.message
+        });
+        
+        // For development/testing - set some activities as assigned
+        const mockAssignedActivities = new Set([
+          "EPF-1",
+          "EPF-2",
+          "GOODS-1"
+        ]);
+        setAssignedActivities(mockAssignedActivities);
+      }
+    } catch (error) {
+      console.error('Error in fetchAssignedActivities:', error);
+      // For development/testing - set some activities as assigned
+      const mockAssignedActivities = new Set([
+        "EPF-1",
+        "EPF-2",
+        "GOODS-1"
+      ]);
+      setAssignedActivities(mockAssignedActivities);
+    }
+  };
+
   // Delete activity function
   const deleteActivity = async (regulationId, activityId) => {
     if (window.confirm("Are you sure you want to delete this activity?")) {
@@ -121,9 +200,16 @@ const Activities = () => {
     }
   };
 
-  // Handle assign button click
+  // Update the isAssigned helper function
+  const isAssigned = (regulationId, activityId) => {
+    return assignedActivities.has(`${regulationId}-${activityId}`);
+  };
+
+  // Update the handleAssign function
   const handleAssign = (regulationId, activityId) => {
-    navigate(`/activities/assign/${regulationId}/${activityId}`);
+    if (!isAssigned(regulationId, activityId)) {
+      navigate(`/activities/assign/${regulationId}/${activityId}`);
+    }
   };
 
   // Enhanced filter function to handle multiple filter categories
@@ -538,10 +624,12 @@ const Activities = () => {
                     <FaTrashAlt />
                   </button>
                   <button
-                    className="btn-text-action"
+                    className={`btn-text-action ${isAssigned(activity.regulation_id, activity.activity_id) ? 'assigned' : ''}`}
                     onClick={() => handleAssign(activity.regulation_id, activity.activity_id)}
+                    disabled={isAssigned(activity.regulation_id, activity.activity_id)}
                   >
-                    Assign
+                    <FaUserCog style={{ marginRight: '5px' }} />
+                    {isAssigned(activity.regulation_id, activity.activity_id) ? 'Assigned' : 'Assign'}
                   </button>
                 </div>
               </div>
@@ -625,11 +713,12 @@ const Activities = () => {
                         <FaTrashAlt size={16} />
                       </button>
                       <button
-                        className="btn-text-action list-btn-text"
+                        className={`btn-text-action list-btn-text ${isAssigned(activity.regulation_id, activity.activity_id) ? 'assigned' : ''}`}
                         onClick={() => handleAssign(activity.regulation_id, activity.activity_id)}
+                        disabled={isAssigned(activity.regulation_id, activity.activity_id)}
                       >
                         <FaUserCog style={{ marginRight: '5px' }} />
-                        Assign
+                        {isAssigned(activity.regulation_id, activity.activity_id) ? 'Assigned' : 'Assign'}
                       </button>
                     </div>
                   </div>

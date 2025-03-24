@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Navbar from './components/Navbar';
 
 // import home page
 import Home from './pages/Home';
@@ -64,19 +65,31 @@ const ProtectedRoute = ({ element, allowedRoles }) => {
   return element;
 };
 
+// Update the Analysis component to be a simple placeholder
+const Analysis = () => {
+  return (
+    <div>
+      <h1>Analysis Page</h1>
+      <p>Analysis dashboard will be integrated here.</p>
+    </div>
+  );
+};
+
 function App() {
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <Navbar />
       <div className="App">
-      <Routes>
-          {/* Public routes */}
+        <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/activities" element={<Activities />} />
+          <Route path="/assign-activity/:regulationId/:activityId" element={<AssignActivity />} />
           
-          {/* Make Home the default route */}
+          {/* Public routes */}
           <Route path="/" element={<Home />} />
           
           {/* Protected routes */}
-          <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
           <Route path="/dashboard/:role" element={<ProtectedRoute element={<Dashboard />} />} />
           
           {/* Entity routes - Only for Global role */}
@@ -181,10 +194,10 @@ function App() {
             element={<ProtectedRoute element={<Tasks />} allowedRoles={['Global', 'Admin', 'User']} />} 
           />
           
-          {/* Analysis route - For all roles */}
+          {/* Analysis route - Only for Admin role */}
           <Route 
             path="/analysis" 
-            element={<ProtectedRoute element={<div>Analysis Page</div>} allowedRoles={['Global', 'Admin', 'User']} />} 
+            element={<ProtectedRoute element={<Analysis />} allowedRoles={['Admin']} />} 
           />
           
           {/* Reassign Task route - For Global and Admin roles */}
@@ -195,7 +208,7 @@ function App() {
           
           {/* Catch all route - redirect to home instead of dashboard */}
           <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+        </Routes>
       </div>
     </Router>
   );

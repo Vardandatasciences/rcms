@@ -808,10 +808,62 @@ body {
   cursor: pointer;
   transition: all var(--transition-fast);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  min-width: 100px;
 }
 
-.btn-text-action svg {
-  margin-right: 5px;
+.btn-text-action:hover {
+  background-color: #065f46 !important;
+  transform: translateY(-2px);
+}
+
+/* Update assigned button styles */
+.btn-text-action.assigned,
+.list-btn-text.assigned {
+  background-color: #f3f4f6 !important;
+  color: #9ca3af !important;
+  cursor: not-allowed;
+  border: 1px solid #e5e7eb;
+  box-shadow: none;
+  opacity: 1;
+  pointer-events: none;
+  transition: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-text-action.assigned:before,
+.list-btn-text.assigned:before {
+  content: '✓';
+  position: absolute;
+  left: 8px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.btn-text-action.assigned svg,
+.list-btn-text.assigned svg {
+  opacity: 0.5;
+  color: #9ca3af;
+}
+
+.btn-text-action.assigned:hover,
+.list-btn-text.assigned:hover {
+  background-color: #f3f4f6 !important;
+  color: #9ca3af !important;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Add disabled style for the button when it's actually disabled */
+.btn-text-action:disabled,
+.list-btn-text:disabled {
+  background-color: #f3f4f6 !important;
+  color: #9ca3af !important;
+  cursor: not-allowed;
+  border: 1px solid #e5e7eb;
+  box-shadow: none;
+  opacity: 1;
+  pointer-events: none;
 }
 
 /* List View */
@@ -1286,75 +1338,6 @@ body {
 .stat-card:nth-child(2) { animation-delay: 0.3s; }
 .stat-card:nth-child(3) { animation-delay: 0.5s; }
 
-/* Assign button styled as text */
-.btn-text-action {
-  padding: 0.5rem 1rem;
-  background-color: var(--gray-200);
-  color: var(--gray-700);
-  border: 1px solid var(--gray-300);
-  border-radius: var(--border-radius-md);
-  font-weight: 600;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  text-decoration: none;
-}
-
-.btn-text-action:hover {
-  background-color: var(--gray-300);
-  color: var(--gray-800);
-}
-
-.list-btn-text {
-  padding: 0.375rem 0.75rem;
-  font-size: 0.75rem;
-}
-
-/* Update card actions for the new assign button */
-.card-actions {
-  padding: 1rem 1.25rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background-color: rgba(246, 246, 246, 0.4);
-  border-top: 1px solid rgba(229, 231, 235, 0.5);
-}
-
-/* Responsive styles for statistics cards */
-@media (max-width: 1024px) {
-  .statistics-cards {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
-  
-  .stat-icon-wrapper {
-    width: 40px;
-    height: 40px;
-    font-size: 1.25rem;
-    margin-right: 1rem;
-  }
-  
-  .stat-count {
-    font-size: 1.75rem;
-  }
-  
-  .circular-progress {
-    width: 50px;
-    height: 50px;
-  }
-  
-  .inner-circle {
-    width: 38px;
-    height: 38px;
-  }
-}
-
-@media (max-width: 768px) {
-  .statistics-cards {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* Update the top blue headers on activity cards */
 .card-id + .criticality-badge {
   background-color: var(--gray-200);
@@ -1715,4 +1698,32 @@ body .activities-container div[class*="MEDIUM"] {
 
 .btn-text-action:hover {
   background-color: #065f46 !important;
+}
+
+.btn-text-action.assigned {
+    background-color: #e9ecef;
+    color: #6c757d;
+    cursor: not-allowed;
+    border: 1px solid #dee2e6;
+}
+
+.btn-text-action.assigned:hover {
+    background-color: #e9ecef;
+    color: #6c757d;
+    transform: none;
+    box-shadow: none;
+}
+
+.list-btn-text.assigned {
+    background-color: #e9ecef;
+    color: #6c757d;
+    cursor: not-allowed;
+    border: 1px solid #dee2e6;
+}
+
+.list-btn-text.assigned:hover {
+    background-color: #e9ecef;
+    color: #6c757d;
+    transform: none;
+    box-shadow: none;
 }

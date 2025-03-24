@@ -17,6 +17,7 @@ const ReassignTask = () => {
   const [users, setUsers] = useState([]);
   const [userData, setUserData] = useState(null);
   const [taskDetails, setTaskDetails] = useState(null);
+  const [entityId, setEntityId] = useState(null);
   
   const [formData, setFormData] = useState({
     preparation_responsibility: "",
@@ -37,17 +38,19 @@ const ReassignTask = () => {
       setUserData(parsedUserData);
       
       // Get entity_id from userData with fallbacks for different property names
-      let entityId = null;
+      let foundEntityId = null;
       if (parsedUserData) {
-        entityId = parsedUserData.entity_id || parsedUserData.entityId || parsedUserData.entityid || 
+        foundEntityId = parsedUserData.entity_id || parsedUserData.entityId || parsedUserData.entityid || 
                   parsedUserData.entId || parsedUserData.entityID || parsedUserData.entityId;
       }
       
-      if (!entityId) {
+      if (!foundEntityId) {
         setError("User entity information is missing. Please log in again.");
         setLoading(false);
         return;
       }
+      
+      setEntityId(foundEntityId);
       
       // If task data was passed via location state, use it
       if (taskData) {
@@ -58,10 +61,10 @@ const ReassignTask = () => {
           review_responsibility: taskData.review_responsibility || "",
         });
         // Fetch users for the entity
-        fetchUsers(entityId);
+        fetchUsers(foundEntityId);
       } else {
         // Otherwise fetch task details
-        fetchTaskDetails(taskId, entityId);
+        fetchTaskDetails(taskId, foundEntityId);
       }
     } catch (err) {
       console.error("Error parsing user data:", err);
@@ -125,53 +128,125 @@ const ReassignTask = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.preparation_responsibility || !formData.review_responsibility) {
-      setError("Please select both preparation and review responsibilities.");
-      return;
-    }
-    
+    setSubmitting(true);
+    setError(null);
+
     try {
-      setSubmitting(true);
-      setError(null);
-      
-      // Get entity_id from userData with fallbacks for different property names
-      let entityId = null;
-      if (userData) {
-        entityId = userData.entity_id || userData.entityId || userData.entityid || 
-                  userData.entId || userData.entityID || userData.entityId;
-      }
-      
-      if (!taskDetails || !taskDetails.regulation_id || !taskDetails.activity_id) {
-        throw new Error("Task details are incomplete. Please refresh the page and try again.");
-      }
-      
-      const requestData = {
-        task_id: taskId,
-        entity_id: entityId,
-        regulation_id: taskDetails.regulation_id,
-        activity_id: taskDetails.activity_id,
-        preparation_responsibility: formData.preparation_responsibility,
-        review_responsibility: formData.review_responsibility,
-        due_on: taskDetails.due_on,
-      };
-      
-      console.log("Submitting reassignment data:", requestData);
-      
-      const response = await axios.post("http://localhost:5000/reassign_task", requestData);
-      console.log("Reassignment response:", response.data);
-      
-      setSuccess("Task reassigned successfully!");
-      
-      // Wait for 1.5 seconds to show the success message before redirecting
-      setTimeout(() => {
-        navigate("/tasks");
-      }, 1500);
-      
+        if (!entityId) {
+            throw new Error("Entity ID is missing. Please log in again.");
+        }
+
+        const requestData = {
+            task_id: taskId,
+            entity_id: entityId,
+            regulation_id: taskDetails.regulation_id,
+            activity_id: taskDetails.activity_id,
+            preparation_responsibility: formData.preparation_responsibility,
+            review_responsibility: formData.review_responsibility
+        };
+
+        console.log('Sending reassignment request:', requestData);
+
+        const response = await axios.post('http://localhost:5000/reassign_task', requestData);
+        console.log('Reassignment response:', response.data);
+
+        // Show success message with notification status
+        const notificationStatus = response.data.notifications_sent || {};
+        const notificationErrors = response.data.notification_errors || [];
+        
+        setSuccess(
+            <div className="success-message">
+                <h3>Task Reassigned Successfully!</h3>
+                <div className="success-details">
+                    <p><strong>Activity:</strong> {taskDetails.activity_name}</p>
+                    <p><strong>Regulation:</strong> {taskDetails.regulation_name}</p>
+                    <p><strong>Due Date:</strong> {taskDetails.due_on}</p>
+                    <p><strong>New Assignee:</strong> {users.find(u => u.user_id === formData.preparation_responsibility)?.user_name}</p>
+                    <p><strong>New Reviewer:</strong> {users.find(u => u.user_id === formData.review_responsibility)?.user_name}</p>
+                </div>
+                <div className="success-note">
+                    <p>✓ Task has been reassigned successfully</p>
+                    {(notificationStatus.assignee || notificationStatus.reviewer) && (
+                        <p>✓ Email notifications sent to:</p>
+                    )}
+                    {notificationStatus.assignee && (
+                        <p style={{marginLeft: '20px'}}>• Assignee</p>
+                    )}
+                    {notificationStatus.reviewer && (
+                        <p style={{marginLeft: '20px'}}>• Reviewer</p>
+                    )}
+                    {notificationErrors.length > 0 && (
+                        <div className="note-warning">
+                            <p>Some notifications could not be sent:</p>
+                            {notificationErrors.map((error, index) => (
+                                <p key={index} style={{marginLeft: '20px'}}>• {error}</p>
+                            ))}
+                        </div>
+                    )}
+                    <div className="redirect-timer">
+                        <p>Redirecting to Tasks page in <span className="countdown">7</span> seconds...</p>
+                    </div>
+                </div>
+                <div className="success-actions">
+                    <button 
+                        className="btn-confirm"
+                        onClick={() => navigate('/tasks')}
+                    >
+                        Go to Tasks Now
+                    </button>
+                </div>
+            </div>
+        );
+
+        // Start countdown timer
+        let timeLeft = 7;
+        const countdownInterval = setInterval(() => {
+            timeLeft -= 1;
+            const countdownElement = document.querySelector('.countdown');
+            if (countdownElement) {
+                countdownElement.textContent = timeLeft;
+            }
+            
+            if (timeLeft <= 0) {
+                clearInterval(countdownInterval);
+                navigate('/tasks');
+            }
+        }, 1000);
+
     } catch (error) {
-      console.error("Error reassigning task:", error);
-      setError(error.response?.data?.error || "Failed to reassign task. Please try again.");
-      setSubmitting(false);
+        console.error('Error reassigning task:', error);
+        setError(
+            <div className="error-message">
+                <h3>Error Reassigning Task</h3>
+                <div className="error-details">
+                    <p className="error-main">There was a problem reassigning the task.</p>
+                    <p className="error-detail">The task may have been reassigned, but there was an issue with notifications.</p>
+                    <p className="error-detail">Please check the tasks list to verify the reassignment.</p>
+                </div>
+                {error.response?.data?.error && (
+                    <div className="error-technical">
+                        <p>Technical Details:</p>
+                        <p>{error.response.data.error}</p>
+                    </div>
+                )}
+                <div className="error-actions">
+                    <button 
+                        className="btn-check"
+                        onClick={() => navigate('/tasks')}
+                    >
+                        Check Tasks List
+                    </button>
+                    <button 
+                        className="btn-retry"
+                        onClick={() => setError(null)}
+                    >
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        );
+    } finally {
+        setSubmitting(false);
     }
   };
 

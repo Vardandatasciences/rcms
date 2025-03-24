@@ -26,6 +26,16 @@
     margin-bottom: 10px;
   }
   
+  .alert-info {
+    color: #0c5460;
+    background-color: #d1ecf1;
+    border: 1px solid #bee5eb;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+  
   form {
     display: flex;
     flex-direction: column;

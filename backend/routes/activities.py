@@ -1,10 +1,12 @@
 from flask import Blueprint, jsonify, request
 from models import db
-from models.models import ActivityMaster,RegulationMaster,EntityRegulationTasks,HolidayMaster,EntityRegulation
+from models.models import ActivityMaster,RegulationMaster,EntityRegulationTasks,HolidayMaster,EntityRegulation, Users
 from sqlalchemy import func
 import traceback
 from dateutil.relativedelta import relativedelta
-from datetime import datetime
+from datetime import datetime, timedelta
+from services.email_service import send_activity_assignment_emails
+import logging
 
 activities_bp = Blueprint('activities', __name__)
 
@@ -314,126 +316,140 @@ def check_task_exists(entity_id, regulation_id, activity_id):
 @activities_bp.route('/assign_task', methods=['POST'])
 def assign_task():
     try:
-        data = request.json
+        data = request.get_json()
+        logging.info(f"Received task assignment data: {data}")
         
-        # Extract data from request
+        # Extract required fields
         entity_id = data.get('entity_id')
         regulation_id = data.get('regulation_id')
         activity_id = data.get('activity_id')
         preparation_responsibility = data.get('preparation_responsibility')
         review_responsibility = data.get('review_responsibility')
-        due_on_str = data.get('due_on')
+        due_on = data.get('due_on')
         
-        # Validate required fields
-        if not all([entity_id, regulation_id, activity_id, preparation_responsibility, review_responsibility, due_on_str]):
-            return jsonify({"error": "Missing required fields"}), 400
+        if not all([entity_id, regulation_id, activity_id, preparation_responsibility, review_responsibility, due_on]):
+            logging.error("Missing required fields in request")
+            return jsonify({'error': 'Missing required fields'}), 400
+            
+        # Check if task already exists
+        existing_task = EntityRegulationTasks.query.filter_by(
+            entity_id=entity_id,
+            regulation_id=regulation_id,
+            activity_id=activity_id
+        ).first()
         
-        # Convert due_on string to date
-        due_on = datetime.strptime(due_on_str, '%Y-%m-%d').date()
-        
-        # Fetch activity details
+        if existing_task:
+            logging.info(f"Task already exists for entity {entity_id}, regulation {regulation_id}, activity {activity_id}")
+            return jsonify({
+                'error': 'This activity has already been assigned',
+                'existing_task': {
+                    'task_id': existing_task.task_id,
+                    'due_date': existing_task.due_on.strftime('%Y-%m-%d'),
+                    'status': existing_task.status,
+                    'preparation_responsibility': existing_task.preparation_responsibility,
+                    'review_responsibility': existing_task.review_responsibility
+                }
+            }), 409
+            
+        # Get activity and regulation details using composite primary key
         activity = ActivityMaster.query.filter_by(
             regulation_id=regulation_id, 
             activity_id=activity_id
         ).first()
         
-        if not activity:
-            return jsonify({"error": "Activity not found"}), 404
+        regulation = RegulationMaster.query.filter_by(
+            regulation_id=regulation_id
+        ).first()
         
-        # Fetch regulation details
-        regulation = RegulationMaster.query.filter_by(regulation_id=regulation_id).first()
-        
-        if not regulation:
-            return jsonify({"error": "Regulation not found"}), 404
-        
-        # Extract necessary fields from activity and regulation
-        frequency = activity.frequency
-        frequency_timeline = activity.frequency_timeline
-        ews = activity.ews
-        criticality = activity.criticality
-        mandatory_optional = activity.mandatory_optional
-        documentupload_yes_no = activity.documentupload_yes_no
-        internal_external = regulation.internal_external
-        
-        # Calculate all due dates up to the end of next year
-        current_date = datetime.now().date()
-        end_of_next_year = datetime(datetime.now().year + 1, 12, 31).date()
-        
-        # List to hold valid due dates
-        due_dates = []
-        current_due_on = due_on
-        
-        # Case 1: If the frequency is 0 (one-time task)
-        if frequency == 0:
-            # If frequency is 0, we only need the due date to be the first calculated due date
-            due_dates.append(current_due_on)
-            print(f"Frequency is 0, one-time task. Due date is {current_due_on}")
-        
-        # Case 2: If the first due date is in the future and frequency > 0
-        elif current_due_on >= current_date and frequency > 0:
-            due_dates.append(current_due_on)
-            print(f"First due date based on future frequency timeline: {current_due_on}")
+        if not activity or not regulation:
+            logging.error(f"Activity or regulation not found. Activity: {activity}, Regulation: {regulation}")
+            return jsonify({'error': 'Activity or regulation not found'}), 404
             
-            # Generate subsequent due dates
-            iteration_count = 0
-            temp_due_on = current_due_on
-            while temp_due_on <= end_of_next_year:
-                if frequency == 52:  # Weekly
-                    temp_due_on += relativedelta(weeks=1)
-                elif frequency == 26:  # fortnightly
-                    temp_due_on += relativedelta(weeks=2)
-                elif frequency == 12:  # Monthly
-                    temp_due_on += relativedelta(months=1)
-                elif frequency == 3:  # Every 4 months
-                    temp_due_on += relativedelta(months=4)
-                elif frequency == 4:  # Quarterly
-                    temp_due_on += relativedelta(months=3)
-                elif frequency == 2:  # Half-yearly
-                    temp_due_on += relativedelta(months=6)
-                elif frequency == 6:  # Every 2 months
-                    temp_due_on += relativedelta(months=2)
-                elif frequency == 1:  # Annually
-                    temp_due_on += relativedelta(years=1)
-                else:
-                    break
-                
-                if temp_due_on <= end_of_next_year:
-                    # Adjust for weekends and holidays
-                    adjusted_due_on = adjust_due_date_for_holidays(temp_due_on)
-                    due_dates.append(adjusted_due_on)
-                    print(f"Generated subsequent due date: {adjusted_due_on}")
-                
-                iteration_count += 1
-                if iteration_count > 100:  # Safety limit
-                    break
+        # Convert due_on to datetime
+        try:
+            due_date = datetime.strptime(due_on, '%Y-%m-%d').date()
+        except ValueError as e:
+            logging.error(f"Invalid date format: {due_on}")
+            return jsonify({'error': 'Invalid date format'}), 400
         
-        # Insert tasks for each due date
-        for task_due_on in due_dates:
-            new_task = EntityRegulationTasks(
+        # Calculate next due date based on frequency
+        try:
+            if activity.frequency == 12:  # Monthly
+                next_due_date = due_date + relativedelta(months=1)
+            elif activity.frequency == 4:  # Quarterly
+                next_due_date = due_date + relativedelta(months=3)
+            elif activity.frequency == 2:  # Half Yearly
+                next_due_date = due_date + relativedelta(months=6)
+            elif activity.frequency == 1:  # Yearly
+                next_due_date = due_date + relativedelta(years=1)
+            else:
+                next_due_date = due_date
+        except Exception as e:
+            logging.error(f"Error calculating next due date: {str(e)}")
+            next_due_date = due_date
+            
+        # Get user details first
+        prep_user = Users.query.get(preparation_responsibility)
+        review_user = Users.query.get(review_responsibility)
+        
+        if not prep_user or not review_user:
+            logging.error(f"User details not found. Prep user: {prep_user}, Review user: {review_user}")
+            return jsonify({'error': 'User details not found'}), 404
+            
+        # Create task record
+        task = EntityRegulationTasks(
                 entity_id=entity_id,
                 regulation_id=regulation_id,
                 activity_id=activity_id,
-                due_on=task_due_on,
+            due_on=due_date,
                 preparation_responsibility=preparation_responsibility,
                 review_responsibility=review_responsibility,
                 status="Yet to Start",
-                ews=ews,
-                criticality=criticality,
-                internal_external=internal_external,
-                mandatory_optional=mandatory_optional,
-                documentupload_yes_no=documentupload_yes_no
-            )
-            db.session.add(new_task)
+            ews=activity.ews,
+            criticality=activity.criticality,
+            internal_external=regulation.internal_external,
+            mandatory_optional=activity.mandatory_optional,
+            documentupload_yes_no=activity.documentupload_yes_no
+        )
         
+        db.session.add(task)
         db.session.commit()
         
-        return jsonify({"message": "Task assigned successfully", "due_dates": [d.strftime('%Y-%m-%d') for d in due_dates]}), 201
+        # Send emails and create calendar events
+        try:
+            send_activity_assignment_emails(
+                activity_details=activity,
+                regulation_details=regulation,
+                preparation_user=preparation_responsibility,
+                review_user=review_responsibility,
+                due_date=due_date
+            )
+        except Exception as e:
+            logging.error(f"Error sending emails: {str(e)}")
+            # Continue with the response even if email sending fails
+        
+        return jsonify({
+            'message': 'Task assigned successfully',
+            'task_id': task.task_id,
+            'due_date': due_date.strftime('%Y-%m-%d'),
+            'next_due_date': next_due_date.strftime('%Y-%m-%d'),
+            'preparation_user': {
+                'name': prep_user.user_name,
+                'email': prep_user.email_id
+            },
+            'review_user': {
+                'name': review_user.user_name,
+                'email': review_user.email_id
+            },
+            'activity_name': activity.activity,
+            'regulation_name': regulation.regulation_name
+        }), 201
     
     except Exception as e:
+        logging.error(f"Error assigning task: {str(e)}")
+        logging.error(traceback.format_exc())
         db.session.rollback()
-        print("Error:", str(e))
-        print(traceback.format_exc())  # Print full traceback for debugging
-        return jsonify({"error": str(e)}), 500
+        return jsonify({'error': f'Failed to assign task: {str(e)}'}), 500
     
 
 # Helper function to adjust due date for holidays and weekends
@@ -453,4 +469,107 @@ def adjust_due_date_for_holidays(due_date):
                 break  # If it's not a holiday or weekend, exit the loop
     
     return due_date
+
+@activities_bp.route('/entity_tasks/<string:entity_id>', methods=['GET'])
+def get_entity_tasks(entity_id):
+    try:
+        # Validate entity_id
+        if not entity_id:
+            logging.error("Entity ID is missing")
+            return jsonify({'error': 'Entity ID is required'}), 400
+
+        # Check if entity exists
+        entity_exists = EntityRegulation.query.filter_by(entity_id=entity_id).first()
+        if not entity_exists:
+            logging.error(f"Entity {entity_id} not found")
+            return jsonify({'error': 'Entity not found', 'tasks': []}), 404
+        
+        # Query tasks for the given entity
+        tasks = EntityRegulationTasks.query.filter_by(
+            entity_id=entity_id
+        ).all()
+        
+        # Convert to JSON response
+        tasks_list = [{
+            # 'task_id': task.task_id,
+            'regulation_id': task.regulation_id,
+            'activity_id': task.activity_id,
+            'due_on': task.due_on.strftime('%Y-%m-%d') if task.due_on else None,
+            'status': task.status,
+            'preparation_responsibility': task.preparation_responsibility,
+            'review_responsibility': task.review_responsibility
+        } for task in tasks]
+        
+        return jsonify({'tasks': tasks_list}), 200
+        
+    except Exception as e:
+        logging.error(f"Error fetching entity tasks: {str(e)}")
+        logging.error(traceback.format_exc())
+        return jsonify({'error': f'Failed to fetch tasks: {str(e)}', 'tasks': []}), 500
+
+@activities_bp.route('/entity_regulation_tasks/<string:entity_id>', methods=['GET'])
+def get_entity_regulation_tasks(entity_id):
+    try:
+        # Add debug logging
+        print(f"Fetching tasks for entity: {entity_id}")
+        print(f"Query parameters: {request.args}")
+        
+        # Get query parameters
+        time_period = request.args.get('time_period', 'All')
+        internal_external = request.args.get('internal_external')
+        mandatory_optional = request.args.get('mandatory_optional')
+        user_id = request.args.get('user_id')
+        
+        # Base query
+        query = EntityRegulationTasks.query.filter_by(entity_id=entity_id)
+        
+        # Apply filters
+        if internal_external and internal_external != 'All':
+            query = query.filter_by(internal_external=internal_external)
+            
+        if mandatory_optional and mandatory_optional != 'All':
+            query = query.filter_by(mandatory_optional=mandatory_optional)
+            
+        if user_id:
+            query = query.filter(
+                (EntityRegulationTasks.preparation_responsibility == user_id) |
+                (EntityRegulationTasks.review_responsibility == user_id)
+            )
+            
+        # Apply time period filter
+        today = datetime.now().date()
+        if time_period == 'Current Month':
+            start_date = today.replace(day=1)
+            next_month = today.replace(day=28) + timedelta(days=4)
+            end_date = next_month - timedelta(days=next_month.day)
+            query = query.filter(EntityRegulationTasks.due_on.between(start_date, end_date))
+        # Add other time period filters as needed
+        
+        # Add logging for the query results
+        tasks = query.all()
+        print(f"Found {len(tasks)} tasks")
+        
+        # Convert to response format with additional logging
+        tasks_list = []
+        for task in tasks:
+            task_data = {
+                'entity_id': task.entity_id,
+                'regulation_id': task.regulation_id,
+                'activity_id': task.activity_id,
+                'status': task.status,
+                'criticality': task.criticality,
+                'due_on': task.due_on.strftime('%Y-%m-%d') if task.due_on else None,
+                'internal_external': task.internal_external,
+                'mandatory_optional': task.mandatory_optional
+            }
+            tasks_list.append(task_data)
+            print(f"Processed task: {task_data}")
+        
+        print(f"Returning {len(tasks_list)} tasks")
+        return jsonify({'tasks': tasks_list}), 200
+        
+    except Exception as e:
+        print(f"Error in get_entity_regulation_tasks: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': str(e), 'tasks': []}), 500
 

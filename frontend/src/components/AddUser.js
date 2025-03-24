@@ -17,6 +17,7 @@ const AddUser = ({ onUserAdded }) => {
   const [entities, setEntities] = useState([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [emailStatus, setEmailStatus] = useState("");
 
   useEffect(() => {
     fetchEntities();
@@ -40,11 +41,17 @@ const AddUser = ({ onUserAdded }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     setErrorMessage("");
+    setEmailStatus("");
 
     axios
       .post("http://localhost:5000/add_user", userData)
       .then((response) => {
         setSuccessMessage(response.data.message);
+        if (response.data.emailSent) {
+          setEmailStatus("A welcome email has been sent to the user with their credentials.");
+        } else if (response.data.emailError) {
+          setEmailStatus("User created successfully, but there was an issue sending the welcome email.");
+        }
         onUserAdded();
       })
       .catch((error) => {
@@ -52,6 +59,7 @@ const AddUser = ({ onUserAdded }) => {
           setErrorMessage("User ID already exists. Please enter a unique User ID.");
         } else {
           console.error("Error adding user:", error);
+          setErrorMessage("An error occurred while adding the user. Please try again.");
         }
       });
   };
@@ -62,6 +70,7 @@ const AddUser = ({ onUserAdded }) => {
         <h2 className="text-center mb-4">Add New User</h2>
         {successMessage && <div className="alert alert-success">{successMessage}</div>}
         {errorMessage && <div className="alert alert-danger">{errorMessage}</div>}
+        {emailStatus && <div className="alert alert-info">{emailStatus}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="grid grid-2">

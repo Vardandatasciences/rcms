@@ -1,0 +1,1874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@17/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@17/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <style>
+/* Updated Dashboard Layout */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    margin: 0;
+    padding: 20px;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.dashboard-title {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.task-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.task-box:hover {
+    transform: scale(1.02);
+}
+
+.charts-container {
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    gap: 20px;
+}
+
+.top-charts-row, .bottom-charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.chart-container {
+    height: 300px;
+    position: relative;
+}
+
+.table-container {
+    overflow-x: auto;
+    max-height: 300px;
+}
+
+.details-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.details-table th, .details-table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.details-table th {
+    background: #f0f9ff;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.details-table tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+.details-table tr:hover {
+    background-color: #f0f0f0;
+}
+
+.table-heading {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 18px;
+}
+
+/* Single row filter container */
+.filters-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px #007bff;
+    margin: 0 auto 20px auto;
+    max-width: 1400px; /* Match your dashboard-grid max-width */
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    margin: 0 8px;
+}
+
+.filter-divider {
+    width: 1px;
+    background-color: #ddd;
+    margin: 0 8px;
+}
+
+/* Button styles for filters */
+.filter-button {
+    background-color: #f8f9fa;
+    border: 1px solid #007bff;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin: 0 2px;
+    cursor: pointer;
+    font-weight: normal;
+    transition: all 0.2s;
+}
+
+.filter-button.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #0062cc;
+}
+/* Entity column styling */
+.entity-cell {
+    background-color: #ffffff;
+}
+.user-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    display: none;
+    float: left;
+    min-width: 10rem;
+    padding: 0.5rem 0;
+    margin: 0.125rem 0 0;
+    font-size: 1rem;
+    color: #212529;
+    text-align: left;
+    list-style: none;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid rgba(0,0,0,.15);
+    border-radius: 0.25rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.dropdown-menu.show {
+    display: block;
+}
+
+.dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 0.25rem 1.5rem;
+    clear: both;
+    font-weight: 400;
+    color: #212529;
+    text-align: inherit;
+    white-space: nowrap;
+    background-color: transparent;
+    border: 0;
+    cursor: pointer;
+}
+
+.dropdown-item:hover, .dropdown-item:focus {
+    color: #16181b;
+    text-decoration: none;
+    background-color: #f8f9fa;
+}
+
+.dropdown-search {
+    padding: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.dropdown-search input {
+    width: 100%;
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+}
+    </style>
+</head>
+
+<!-- ---------------------------------------------------------------------------------------------------------------------------------------------- -->
+
+
+<body>
+    <div id="dashboard-container"></div>
+
+    <script>
+        const { useState, useEffect, useRef } = React;
+
+// Inside the TaskDashboard component, let's update the handleUserSelect function 
+// and make sure it properly updates all filters and data
+
+function TaskDashboard({ factoryId }) {
+    // Initialize segmentFiltered in window object
+    if (typeof window !== 'undefined' && !window.hasOwnProperty('segmentFiltered')) {
+        window.segmentFiltered = null;
+    }
+    
+    const [summary, setSummary] = useState(null);
+    const summaryRef = useRef(null); // Add a ref to store the current summary data
+    const [selectedStatus, setSelectedStatus] = useState(null);
+    const [selectedCategory, setSelectedCategory] = useState(null);
+    const [selectedCriticality, setSelectedCriticality] = useState(null);
+    const [filteredTableData, setFilteredTableData] = useState([]);
+    const pieChartRef = useRef(null);
+    const barChartRef = useRef(null);
+    const criticalityChartRef = useRef(null);
+    const pieChartInstance = useRef(null);
+    const barChartInstance = useRef(null);
+    const criticalityChartInstance = useRef(null);
+    const [selectedTimePeriod, setSelectedTimePeriod] = useState('All');
+    const [selectedInternalExternalValue, setSelectedInternalExternalValue] = useState(null);
+    const [selectedMandatoryOptionalValue, setSelectedMandatoryOptionalValue] = useState(null);
+    const [taskData, setTaskData] = useState([]); // State to hold your task data
+    const [filteredData, setFilteredData] = useState([]); // State to hold filtered data
+    const [users, setUsers] = useState([]);
+    const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
+    // Add these state variables to the component
+    const [availableStatuses, setAvailableStatuses] = useState([]);
+    const [availableCategories, setAvailableCategories] = useState([]);
+    const [availableCriticalities, setAvailableCriticalities] = useState([]);
+    const [userSearchTerm, setUserSearchTerm] = useState('');
+
+    useEffect(() => {
+        axios.get(`/api/users`)
+            .then(response => {
+                if (Array.isArray(response.data)) {
+                    setUsers(response.data);
+                } else {
+                    console.error("Invalid users response:", response.data);
+                    setUsers([]);
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching users:", error);
+                setUsers([]);
+            });
+    }, []);
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------------
+    
+    // Initial data load on component mount
+    useEffect(() => {
+        fetchData();
+    }, [factoryId]);
+
+    // Add a new useEffect to handle chart updates when filters change
+    useEffect(() => {
+        if (summary) {
+            console.log(`Status changed to: ${selectedStatus}`);
+            summaryRef.current = summary; // Keep the ref in sync with the state
+            createOrUpdatePieChart(summary, selectedStatus);
+            createOrUpdateBarChart(summary, selectedStatus);
+            createOrUpdateCriticalityChart(summary, selectedStatus);
+        }
+    }, [selectedStatus, selectedCategory, selectedCriticality, summary]);
+
+    // Function to fetch data with all current filters
+    const fetchData = () => {
+        const params = {
+            time_period: selectedTimePeriod,
+            internal_external: selectedInternalExternalValue,
+            mandatory_optional: selectedMandatoryOptionalValue
+        };
+        
+        // Add user_id to params if a user is selected
+        if (selectedUser) {
+            params.user_id = selectedUser.id;
+        }
+        
+        axios.get(`/api/task-summary/${factoryId}`, { params })
+            .then(response => {
+                setSummary(response.data);
+                summaryRef.current = response.data; // Set the ref when data is fetched
+                if (response.data) {
+                    // Extract available filters from response data
+                    extractAvailableFilters(response.data);
+                    createOrUpdatePieChart(response.data);
+                    createOrUpdateBarChart(response.data);
+                    createOrUpdateCriticalityChart(response.data);
+                    updateTableData(response.data.detailed_data);
+                }
+            })
+            .catch(error => console.error("Error fetching task summary:", error));
+    };
+
+// --------------------------------------------------------------------------------------------------------------------------------------------------------
+    
+    // Extract available filter options from the data
+    const extractAvailableFilters = (data) => {
+        if (!data || !data.detailed_data) return;
+        
+        const statuses = new Set();
+        const categories = new Set();
+        const criticalities = new Set();
+        
+        data.detailed_data.forEach(item => {
+            if (item.calculated_status) statuses.add(item.calculated_status);
+            if (item.category) categories.add(item.category);
+            if (item.criticality) criticalities.add(item.criticality);
+        });
+        
+        setAvailableStatuses(Array.from(statuses));
+        setAvailableCategories(Array.from(categories));
+        setAvailableCriticalities(Array.from(criticalities));
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------------------
+
+    useEffect(() => {
+        if (summary) {
+            updateTableData(summary.detailed_data);
+        }
+    }, [selectedStatus, selectedCategory, selectedCriticality, summary]);
+
+    const updateTableData = (detailedData) => {
+        // If no detailed data is provided, try to get it from summaryRef
+        if (!detailedData && summaryRef.current && summaryRef.current.detailed_data) {
+            detailedData = summaryRef.current.detailed_data;
+            console.log("Using detailed data from summaryRef");
+        }
+        
+        if (!detailedData) {
+            console.log("No detailed data available to filter");
+            setFilteredTableData([]);
+            return;
+        }
+        
+        try {
+            console.log("updateTableData called with filters:", {
+                status: selectedStatus,
+                category: selectedCategory,
+                criticality: selectedCriticality
+            });
+            
+            let filtered = [...detailedData];
+            console.log(`Starting filtering with ${filtered.length} records`);
+            
+            // Apply status filter first
+            if (selectedStatus) {
+                filtered = filtered.filter(item => item.calculated_status === selectedStatus);
+                console.log(`After status filter (${selectedStatus}): ${filtered.length} records`);
+            }
+            
+            // Then apply category filter if present
+            if (selectedCategory) {
+                filtered = filtered.filter(item => item.category === selectedCategory);
+                console.log(`After category filter (${selectedCategory}): ${filtered.length} records`);
+            }
+            
+            // Finally apply criticality filter if present
+            if (selectedCriticality) {
+                filtered = filtered.filter(item => item.criticality === selectedCriticality);
+                console.log(`After criticality filter (${selectedCriticality}): ${filtered.length} records`);
+            }
+            
+            // Create a unique key for each record to avoid duplicate counts
+            const groupedData = {};
+            filtered.forEach(item => {
+                if (!item) return; // Skip null items
+                
+                const key = `${item.Entity || 'Unknown'}-${item.criticality || 'Unknown'}-${item.Task || 'Unknown'}-${item.calculated_status || 'Unknown'}-${item.regulation || 'Unknown'}`;
+                if (!groupedData[key]) {
+                    groupedData[key] = { ...item, Count: 1 };
+                } else {
+                    groupedData[key].Count += 1;
+                }
+            });
+            
+            const finalData = Object.values(groupedData);
+            console.log(`Final filtered data count: ${finalData.length}`);
+            
+            // Set the filtered table data directly
+            setFilteredTableData(finalData);
+        } catch (error) {
+            console.error("Error updating table data:", error);
+            setFilteredTableData([]);
+        }
+    };
+
+    const handleUserSelect = (userId, userName) => {
+        // Set selected user
+        const newUser = { id: userId, name: userName };
+        setSelectedUser(newUser);
+        setIsUserDropdownOpen(false);
+        
+        // Reset other filters when changing user
+        setSelectedStatus(null);
+        setSelectedCategory(null);
+        setSelectedCriticality(null);
+        
+        // Fetch data with the new user filter
+        const params = {
+            user_id: userId,
+            time_period: selectedTimePeriod,
+            internal_external: selectedInternalExternalValue,
+            mandatory_optional: selectedMandatoryOptionalValue
+        };
+        
+        axios.get(`/api/task-summary/${factoryId}`, { params })
+            .then(response => {
+                setSummary(response.data);
+                summaryRef.current = response.data; // Store the summary data in the ref
+                if (response.data) {
+                    // Extract available filters specific to this user
+                    extractAvailableFilters(response.data);
+                    createOrUpdatePieChart(response.data);
+                    createOrUpdateBarChart(response.data);
+                    createOrUpdateCriticalityChart(response.data);
+                    updateTableData(response.data.detailed_data);
+                }
+            })
+            .catch(error => console.error("Error fetching filtered task summary:", error));
+    };
+    
+    const clearUserFilter = () => {
+        setSelectedUser(null);
+        setIsUserDropdownOpen(false);
+        
+        // Reset status, category, and criticality filters
+        setSelectedStatus(null);
+        setSelectedCategory(null);
+        setSelectedCriticality(null);
+        
+        // Fetch data without user filter
+        const params = {
+            time_period: selectedTimePeriod,
+            internal_external: selectedInternalExternalValue,
+            mandatory_optional: selectedMandatoryOptionalValue
+        };
+        
+        axios.get(`/api/task-summary/${factoryId}`, { params })
+            .then(response => {
+                setSummary(response.data);
+                summaryRef.current = response.data; // Store the summary data in the ref
+                if (response.data) {
+                    // Reset available filters to include all options
+                    extractAvailableFilters(response.data);
+                    createOrUpdatePieChart(response.data);
+                    createOrUpdateBarChart(response.data);
+                    createOrUpdateCriticalityChart(response.data);
+                    updateTableData(response.data.detailed_data);
+                }
+            })
+            .catch(error => console.error("Error fetching filtered task summary:", error));
+    };
+
+    
+
+    const handleTimePeriodClick = (period) => {
+        setSelectedTimePeriod(period);
+        
+        // Fetch data with the new time period filter
+        const params = {
+            time_period: period,
+            internal_external: selectedInternalExternalValue,
+            mandatory_optional: selectedMandatoryOptionalValue
+        };
+        
+        // Include user filter if selected
+        if (selectedUser) {
+            params.user_id = selectedUser.id;
+        }
+        
+        axios.get(`/api/task-summary/${factoryId}`, { params })
+            .then(response => {
+                setSummary(response.data);
+                summaryRef.current = response.data; // Store the summary data in the ref
+                if (response.data) {
+                    extractAvailableFilters(response.data);
+                    createOrUpdatePieChart(response.data);
+                    createOrUpdateBarChart(response.data);
+                    createOrUpdateCriticalityChart(response.data);
+                    updateTableData(response.data.detailed_data);
+                }
+            })
+            .catch(error => console.error("Error fetching filtered task summary:", error));
+    };
+
+    const handleInternalExternalClick = (value) => {
+        setSelectedInternalExternalValue(value);
+        
+        // Fetch data with the correct parameter name and combine with existing filters
+        const params = { 
+            internal_external: value,
+            time_period: selectedTimePeriod,
+            mandatory_optional: selectedMandatoryOptionalValue
+        };
+        
+        // Include user filter if selected
+        if (selectedUser) {
+            params.user_id = selectedUser.id;
+        }
+        
+        axios.get(`/api/task-summary/${factoryId}`, { params })
+            .then(response => {
+                console.log('Internal/External filter:', value);
+                setSummary(response.data);
+                summaryRef.current = response.data; // Store the summary data in the ref
+                if (response.data) {
+                    extractAvailableFilters(response.data);
+                    createOrUpdatePieChart(response.data);
+                    createOrUpdateBarChart(response.data);
+                    createOrUpdateCriticalityChart(response.data);
+                    updateTableData(response.data.detailed_data);
+                }
+            })
+            .catch(error => console.error("Error fetching filtered task summary:", error));
+    };
+
+    const handleMandatoryOptionalClick = (value) => {
+        setSelectedMandatoryOptionalValue(value);
+        
+        // Fetch data with the correct parameters and maintain other filters
+        const params = {
+            mandatory_optional: value,
+            time_period: selectedTimePeriod,
+            internal_external: selectedInternalExternalValue
+        };
+        
+        // Include user filter if selected
+        if (selectedUser) {
+            params.user_id = selectedUser.id;
+        }
+        
+        axios.get(`/api/task-summary/${factoryId}`, { params })
+            .then(response => {
+                console.log('Mandatory/Optional filter:', value);
+                setSummary(response.data);
+                summaryRef.current = response.data; // Store the summary data in the ref
+                if (response.data) {
+                    extractAvailableFilters(response.data);
+                    createOrUpdatePieChart(response.data);
+                    createOrUpdateBarChart(response.data);
+                    createOrUpdateCriticalityChart(response.data);
+                    updateTableData(response.data.detailed_data);
+                }
+            })
+            .catch(error => console.error("Error fetching filtered task summary:", error));
+    };
+
+    const handleStatusClick = (status) => {
+        // Toggle status selection - if clicking the same status, clear it, otherwise set the new status
+        const newStatus = status === selectedStatus ? null : status;
+        
+        // Set the new status directly
+        setSelectedStatus(newStatus);
+        
+        // Reset other filters when selecting status
+        setSelectedCategory(null);
+        setSelectedCriticality(null);
+        
+        // Update all visualizations with the new status
+        if (summary) {
+            // Use setTimeout to ensure state updates have been processed
+            setTimeout(() => {
+                if (pieChartInstance.current) {
+                    createOrUpdatePieChart(summary, newStatus);
+                }
+                if (barChartInstance.current) {
+                    createOrUpdateBarChart(summary, newStatus);
+                }
+                if (criticalityChartInstance.current) {
+                    createOrUpdateCriticalityChart(summary, newStatus);
+                }
+                
+                // Update table data
+                const filteredData = summary.detailed_data.filter(item => 
+                    newStatus ? item.calculated_status === newStatus : true
+                );
+                
+                // Group the data to avoid duplicates
+                const groupedData = {};
+                filteredData.forEach(item => {
+                    const key = `${item.Entity}-${item.criticality}-${item.Task}-${item.calculated_status}-${item.regulation}`;
+                    if (!groupedData[key]) {
+                        groupedData[key] = { ...item, Count: 1 };
+                    } else {
+                        groupedData[key].Count += 1;
+                    }
+                });
+                
+                setFilteredTableData(Object.values(groupedData));
+            }, 50);
+        }
+    };
+
+    const handleCategoryClick = (category) => {
+        // Toggle category selection
+        const newCategory = category === selectedCategory ? null : category;
+        
+        // Just update the state - the useEffect will handle the chart updates
+        setSelectedCategory(newCategory);
+        
+        // Reset criticality filter but keep status filter
+        setSelectedCriticality(null);
+        
+        console.log(`Category clicked: ${category}, new category: ${newCategory}`);
+    };
+
+    const handleCriticalityClick = (criticality) => {
+        // Toggle criticality selection
+        const newCriticality = criticality === selectedCriticality ? null : criticality;
+        
+        // Just update the state - the useEffect will handle the chart updates
+        setSelectedCriticality(newCriticality);
+        
+        console.log(`Criticality clicked: ${criticality}, new criticality: ${newCriticality}`);
+    };
+
+    const createOrUpdatePieChart = (data, activeStatus) => {
+        if (!pieChartRef.current) return;
+        
+        // If there's an existing chart, destroy it
+        if (pieChartInstance.current) {
+            pieChartInstance.current.destroy();
+        }
+        
+        // Prepare data for the pie chart
+        const labels = [
+            'Completed', 
+            'Completed with Delay', 
+            'Due', 
+            'Due with Delay', 
+            'Ongoing', 
+            'Ongoing with Delay'
+        ];
+        
+        // Prepare data and highlight the active segment if selected
+        const backgroundColors = [
+            '#007bff', // Completed - Blue
+            '#28a745', // Completed with Delay - Green
+            '#dc3545', // Due - Red
+            '#fd7e14', // Due with Delay - Orange
+            '#17a2b8', // Ongoing - Teal
+            '#ffc107'  // Ongoing with Delay - Yellow
+        ];
+        
+        // If a status is active, make other segments more transparent
+        if (activeStatus) {
+            const activeIndex = labels.indexOf(activeStatus);
+            if (activeIndex !== -1) {
+                backgroundColors.forEach((color, i) => {
+                    if (i !== activeIndex) {
+                        // Make non-active segments more transparent
+                        backgroundColors[i] = backgroundColors[i] + '80'; // Add 50% transparency
+                    }
+                });
+            }
+        }
+        
+        const chartData = {
+            labels: labels,
+            datasets: [{
+                data: [
+                    data.completed,
+                    data.completed_with_delay,
+                    data.due,
+                    data.due_with_delay,
+                    data.ongoing,
+                    data.ongoing_with_delay
+                ],
+                backgroundColor: backgroundColors,
+                hoverOffset: 4
+            }]
+        };
+        
+        // Create the chart
+        const ctx = pieChartRef.current.getContext('2d');
+        pieChartInstance.current = new Chart(ctx, {
+            type: 'pie',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            boxWidth: 12,
+                            font: {
+                                size: 11
+                            },
+                            // Highlight the active status in the legend
+                            filter: (legendItem, data) => {
+                                if (activeStatus) {
+                                    legendItem.fontColor = legendItem.text === activeStatus ? '#000000' : '#999999';
+                                }
+                                return true;
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: selectedUser ? 
+                            `Task Status Distribution for ${selectedUser.name}` : 
+                            'Task Status Distribution',
+                        font: {
+                            size: 16
+                        }
+                    }
+                },
+                onClick: (e, elements) => {
+                    if (elements && elements.length > 0) {
+                        const index = elements[0].index;
+                        const status = labels[index];
+                        
+                        // Toggle status selection
+                        const newStatus = status === selectedStatus ? null : status;
+                        
+                        // Update state
+                        setSelectedStatus(newStatus);
+                        
+                        console.log(`Pie chart clicked: ${status}, new status: ${newStatus}`);
+                        console.log("Summary data status:", {
+                            summaryState: summary ? "Available" : "Not available",
+                            summaryRef: summaryRef.current ? "Available" : "Not available",
+                            detailedData: summaryRef.current && summaryRef.current.detailed_data ? 
+                                `Available (${summaryRef.current.detailed_data.length} records)` : "Not available"
+                        });
+                        
+                        // Force immediate table update
+                        setTimeout(() => {
+                            // Check if summaryRef.current and detailed_data exist
+                            if (!summaryRef.current || !summaryRef.current.detailed_data) {
+                                console.error("Summary data is not available");
+                                return;
+                            }
+                            
+                            let filtered = [...summaryRef.current.detailed_data];
+                            
+                            // Apply the new status filter
+                            if (newStatus) {
+                                filtered = filtered.filter(item => item.calculated_status === newStatus);
+                            }
+                            
+                            // Apply category filter if present
+                            if (selectedCategory) {
+                                filtered = filtered.filter(item => item.category === selectedCategory);
+                            }
+                            
+                            // Apply criticality filter if present
+                            if (selectedCriticality) {
+                                filtered = filtered.filter(item => item.criticality === selectedCriticality);
+                            }
+                            
+                            // Group the filtered data
+                            const groupedData = {};
+                            filtered.forEach(item => {
+                                const key = `${item.Entity}-${item.criticality}-${item.Task}-${item.calculated_status}-${item.regulation}`;
+                                if (!groupedData[key]) {
+                                    groupedData[key] = { ...item, Count: 1 };
+                                } else {
+                                    groupedData[key].Count += 1;
+                                }
+                            });
+                            
+                            // Update the table data
+                            setFilteredTableData(Object.values(groupedData));
+                            console.log(`Directly updated table with ${Object.values(groupedData).length} records after status click`);
+                        }, 0);
+                    }
+                }
+            }
+        });
+    };
+
+    const createOrUpdateBarChart = (data, activeStatus) => {
+        if (!barChartRef.current) return;
+        
+        // If there's an existing chart, destroy it
+        if (barChartInstance.current) {
+            barChartInstance.current.destroy();
+        }
+        
+        // Process category data for the bar chart
+        const categoryData = data.category_data;
+        const categories = Object.keys(categoryData);
+        
+        // Status types we want to track (in stacking order)
+        const statuses = [
+            'Completed', 
+            'Completed with Delay', 
+            'Ongoing', 
+            'Ongoing with Delay', 
+            'Due', 
+            'Due with Delay'
+        ];
+        
+        // Colors for each status
+        const statusColors = {
+            'Completed': '#007bff',
+            'Completed with Delay': '#28a745',
+            'Ongoing': '#17a2b8',
+            'Ongoing with Delay': '#ffc107',
+            'Due': '#dc3545',
+            'Due with Delay': '#fd7e14'
+        };
+        
+        // Create datasets for each status
+        let datasets = [];
+        
+        if (activeStatus) {
+            // If a status is selected, only show that status
+            const counts = categories.map(category => {
+                return categoryData[category][activeStatus] || 0;
+            });
+            
+            datasets = [{
+                label: activeStatus,
+                data: counts,
+                backgroundColor: statusColors[activeStatus],
+                borderColor: 'rgba(255, 255, 255, 0.8)',
+                borderWidth: 1
+            }];
+        } else {
+            // Otherwise show all statuses
+            datasets = statuses.map(status => {
+                const counts = categories.map(category => {
+                    return categoryData[category][status] || 0;
+                });
+                
+                return {
+                    label: status,
+                    data: counts,
+                    backgroundColor: statusColors[status],
+                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                    borderWidth: 1
+                };
+            });
+        }
+        
+        // Create the chart
+        const ctx = barChartRef.current.getContext('2d');
+        barChartInstance.current = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: categories,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: !activeStatus,
+                        title: {
+                            display: true,
+                            text: 'Category'
+                        }
+                    },
+                    y: {
+                        stacked: !activeStatus,
+                        title: {
+                            display: true,
+                            text: 'Number of Tasks'
+                        },
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            font: {
+                                size: 10
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: selectedUser ?
+                            (activeStatus ? 
+                                `Category Distribution for ${selectedUser.name}'s ${activeStatus} Tasks` :
+                                `Category-wise Task Status for ${selectedUser.name}`) :
+                            (activeStatus ? 
+                                `Category Distribution for ${activeStatus} Tasks` :
+                                'Category-wise Task Status'),
+                        font: {
+                            size: 16
+                        }
+                    }
+                },
+                onClick: function(e, elements) {
+                    // Handle clicks on specific segments in stacked bar chart
+                    if (elements && elements.length > 0) {
+                        const element = elements[0];
+                        const datasetIndex = element.datasetIndex;
+                        const index = element.index;
+                        
+                        // Get the category (from x-axis) and status (from dataset)
+                        const category = categories[index];
+                        const status = datasets[datasetIndex].label;
+                        
+                        console.log(`Category chart segment clicked - Category: ${category}, Status: ${status}`);
+                        
+                        // Store current filter states to restore later
+                        const prevStatus = selectedStatus;
+                        const prevCategory = selectedCategory;
+                        const prevCriticality = selectedCriticality;
+                        
+                        // Force immediate table update with both filters without changing state
+                        setTimeout(() => {
+                            // Check if summaryRef.current and detailed_data exist
+                            if (!summaryRef.current || !summaryRef.current.detailed_data) {
+                                console.error("Summary data is not available");
+                                return;
+                            }
+                            
+                            let filtered = [...summaryRef.current.detailed_data];
+                            
+                            // Apply both filters from the clicked segment
+                            filtered = filtered.filter(item => 
+                                item.category === category && 
+                                item.calculated_status === status
+                            );
+                            
+                            // Apply criticality filter if present
+                            if (selectedCriticality) {
+                                filtered = filtered.filter(item => item.criticality === selectedCriticality);
+                            }
+                            
+                            // Group the filtered data
+                            const groupedData = {};
+                            filtered.forEach(item => {
+                                const key = `${item.Entity}-${item.criticality}-${item.Task}-${item.calculated_status}-${item.regulation}`;
+                                if (!groupedData[key]) {
+                                    groupedData[key] = { ...item, Count: 1 };
+                                } else {
+                                    groupedData[key].Count += 1;
+                                }
+                            });
+                            
+                            // Update only the table data without changing state
+                            setFilteredTableData(Object.values(groupedData));
+                            console.log(`Directly updated table with ${Object.values(groupedData).length} records for ${category} ${status} without changing charts`);
+                            
+                            // Set a temporary flag to indicate segment-specific filtering
+                            window.segmentFiltered = {
+                                category: category,
+                                status: status
+                            };
+                        }, 0);
+                    }
+                    // Handle clicks on the bar as a whole (not a specific segment)
+                    else if (!elements || elements.length === 0) {
+                        const points = barChartInstance.current.getElementsAtEventForMode(
+                            e, 'nearest', { intersect: true }, false
+                        );
+                        if (points.length) {
+                            const firstPoint = points[0];
+                            const category = categories[firstPoint.index];
+                            
+                            // Toggle category selection
+                            const newCategory = category === selectedCategory ? null : category;
+                            
+                            // Update state
+                            setSelectedCategory(newCategory);
+                            
+                            console.log(`Category chart clicked: ${category}, new category: ${newCategory}`);
+                            
+                            // Force immediate table update
+                            setTimeout(() => {
+                                // Check if summaryRef.current and detailed_data exist
+                                if (!summaryRef.current || !summaryRef.current.detailed_data) {
+                                    console.error("Summary data is not available");
+                                    return;
+                                }
+                                
+                                let filtered = [...summaryRef.current.detailed_data];
+                                
+                                // Apply status filter if present
+                                if (selectedStatus) {
+                                    filtered = filtered.filter(item => item.calculated_status === selectedStatus);
+                                }
+                                
+                                // Apply the new category filter
+                                if (newCategory) {
+                                    filtered = filtered.filter(item => item.category === newCategory);
+                                }
+                                
+                                // Apply criticality filter if present
+                                if (selectedCriticality) {
+                                    filtered = filtered.filter(item => item.criticality === selectedCriticality);
+                                }
+                                
+                                // Group the filtered data
+                                const groupedData = {};
+                                filtered.forEach(item => {
+                                    const key = `${item.Entity}-${item.criticality}-${item.Task}-${item.calculated_status}-${item.regulation}`;
+                                    if (!groupedData[key]) {
+                                        groupedData[key] = { ...item, Count: 1 };
+                                    } else {
+                                        groupedData[key].Count += 1;
+                                    }
+                                });
+                                
+                                // Update the table data
+                                setFilteredTableData(Object.values(groupedData));
+                                console.log(`Directly updated table with ${Object.values(groupedData).length} records after category click`);
+                            }, 0);
+                        }
+                    }
+                }
+            }
+        });
+    };
+
+    const createOrUpdateCriticalityChart = (data, activeStatus) => {
+        if (!criticalityChartRef.current) return;
+        
+        // If there's an existing chart, destroy it
+        if (criticalityChartInstance.current) {
+            criticalityChartInstance.current.destroy();
+        }
+        
+        // Process criticality data for the chart
+        const criticalityData = data.criticality_data || {};
+        const criticalities = Object.keys(criticalityData);
+        
+        // Status types we want to track
+        const statuses = [
+            'Completed', 
+            'Completed with Delay', 
+            'Ongoing', 
+            'Ongoing with Delay', 
+            'Due', 
+            'Due with Delay'
+        ];
+        
+        // Colors for each status
+        const statusColors = {
+            'Completed': '#007bff',
+            'Completed with Delay': '#28a745',
+            'Ongoing': '#17a2b8',
+            'Ongoing with Delay': '#ffc107',
+            'Due': '#dc3545',
+            'Due with Delay': '#fd7e14'
+        };
+        
+        let datasets = [];
+        
+        // If a status is selected, show only that status across criticalities
+        if (activeStatus) {
+            const counts = criticalities.map(criticality => {
+                return criticalityData[criticality][activeStatus] || 0;
+            });
+            
+            datasets = [{
+                label: activeStatus,
+                data: counts,
+                backgroundColor: statusColors[activeStatus],
+                borderColor: 'rgba(255, 255, 255, 0.8)',
+                borderWidth: 1
+            }];
+        } else {
+            // Otherwise show all statuses stacked by criticality
+            datasets = statuses.map(status => {
+                const counts = criticalities.map(criticality => {
+                    return criticalityData[criticality][status] || 0;
+                });
+                
+                return {
+                    label: status,
+                    data: counts,
+                    backgroundColor: statusColors[status],
+                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                    borderWidth: 1
+                };
+            });
+        }
+        
+        // Create the chart
+        const ctx = criticalityChartRef.current.getContext('2d');
+        criticalityChartInstance.current = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: criticalities,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: !activeStatus,
+                        title: {
+                            display: true,
+                            text: 'Criticality'
+                        }
+                    },
+                    y: {
+                        stacked: !activeStatus,
+                        title: {
+                            display: true,
+                            text: 'Number of Tasks'
+                        },
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            font: {
+                                size: 10
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: selectedUser ?
+                            (activeStatus ? 
+                                `Criticality Distribution for ${selectedUser.name}'s ${activeStatus} Tasks` :
+                                `Tasks by Criticality Level for ${selectedUser.name}`) :
+                            (activeStatus ? 
+                                `Criticality Distribution for ${activeStatus} Tasks` :
+                                'Tasks by Criticality Level'),
+                        font: {
+                            size: 16
+                        }
+                    }
+                },
+                onClick: function(e, elements) {
+                    // Handle clicks on specific segments in stacked bar chart
+                    if (elements && elements.length > 0) {
+                        const element = elements[0];
+                        const datasetIndex = element.datasetIndex;
+                        const index = element.index;
+                        
+                        // Get the criticality (from x-axis) and status (from dataset)
+                        const criticality = criticalities[index];
+                        const status = datasets[datasetIndex].label;
+                        
+                        console.log(`Criticality chart segment clicked - Criticality: ${criticality}, Status: ${status}`);
+                        
+                        // Store current filter states to restore later
+                        const prevStatus = selectedStatus;
+                        const prevCategory = selectedCategory;
+                        const prevCriticality = selectedCriticality;
+                        
+                        // Force immediate table update with both filters without changing state
+                        setTimeout(() => {
+                            // Check if summaryRef.current and detailed_data exist
+                            if (!summaryRef.current || !summaryRef.current.detailed_data) {
+                                console.error("Summary data is not available");
+                                return;
+                            }
+                            
+                            let filtered = [...summaryRef.current.detailed_data];
+                            
+                            // Apply both filters from the clicked segment
+                            filtered = filtered.filter(item => 
+                                item.criticality === criticality && 
+                                item.calculated_status === status
+                            );
+                            
+                            // Apply category filter if present
+                            if (selectedCategory) {
+                                filtered = filtered.filter(item => item.category === selectedCategory);
+                            }
+                            
+                            // Group the filtered data
+                            const groupedData = {};
+                            filtered.forEach(item => {
+                                const key = `${item.Entity}-${item.criticality}-${item.Task}-${item.calculated_status}-${item.regulation}`;
+                                if (!groupedData[key]) {
+                                    groupedData[key] = { ...item, Count: 1 };
+                                } else {
+                                    groupedData[key].Count += 1;
+                                }
+                            });
+                            
+                            // Update only the table data without changing state
+                            setFilteredTableData(Object.values(groupedData));
+                            console.log(`Directly updated table with ${Object.values(groupedData).length} records for ${criticality} ${status} without changing charts`);
+                            
+                            // Set a temporary flag to indicate segment-specific filtering
+                            window.segmentFiltered = {
+                                criticality: criticality,
+                                status: status
+                            };
+                        }, 0);
+                    } 
+                    // Handle clicks on the bar as a whole (not a specific segment)
+                    else if (!elements || elements.length === 0) {
+                        const points = criticalityChartInstance.current.getElementsAtEventForMode(
+                            e, 'nearest', { intersect: true }, false
+                        );
+                        if (points.length) {
+                            const firstPoint = points[0];
+                            const criticality = criticalities[firstPoint.index];
+                            
+                            // Toggle criticality selection
+                            const newCriticality = criticality === selectedCriticality ? null : criticality;
+                            
+                            // Update state
+                            setSelectedCriticality(newCriticality);
+                            
+                            console.log(`Criticality chart clicked: ${criticality}, new criticality: ${newCriticality}`);
+                            
+                            // Force immediate table update
+                            setTimeout(() => {
+                                // Check if summaryRef.current and detailed_data exist
+                                if (!summaryRef.current || !summaryRef.current.detailed_data) {
+                                    console.error("Summary data is not available");
+                                    return;
+                                }
+                                
+                                let filtered = [...summaryRef.current.detailed_data];
+                                
+                                // Apply status filter if present
+                                if (selectedStatus) {
+                                    filtered = filtered.filter(item => item.calculated_status === selectedStatus);
+                                }
+                                
+                                // Apply category filter if present
+                                if (selectedCategory) {
+                                    filtered = filtered.filter(item => item.category === selectedCategory);
+                                }
+                                
+                                // Apply the new criticality filter
+                                if (newCriticality) {
+                                    filtered = filtered.filter(item => item.criticality === newCriticality);
+                                }
+                                
+                                // Group the filtered data
+                                const groupedData = {};
+                                filtered.forEach(item => {
+                                    const key = `${item.Entity}-${item.criticality}-${item.Task}-${item.calculated_status}-${item.regulation}`;
+                                    if (!groupedData[key]) {
+                                        groupedData[key] = { ...item, Count: 1 };
+                                    } else {
+                                        groupedData[key].Count += 1;
+                                    }
+                                });
+                                
+                                // Update the table data
+                                setFilteredTableData(Object.values(groupedData));
+                                console.log(`Directly updated table with ${Object.values(groupedData).length} records after criticality click`);
+                            }, 0);
+                        }
+                    }
+                }
+            }
+        });
+    };
+
+    const getActiveFilterMessage = () => {
+        const filters = [];
+        
+        // Add segment filter if active
+        if (window.segmentFiltered) {
+            if (window.segmentFiltered.status) filters.push(`Status: ${window.segmentFiltered.status}`);
+            if (window.segmentFiltered.category) filters.push(`Category: ${window.segmentFiltered.category}`);
+            if (window.segmentFiltered.criticality) filters.push(`Criticality: ${window.segmentFiltered.criticality}`);
+            filters.push("(Segment View)");
+        } else {
+            // Add regular filters
+            if (selectedUser) filters.push(`User: ${selectedUser.name}`);
+            if (selectedTimePeriod && selectedTimePeriod !== 'All') filters.push(`Time: ${selectedTimePeriod}`);
+            if (selectedInternalExternalValue && selectedInternalExternalValue !== 'All') filters.push(`Type: ${selectedInternalExternalValue}`);
+            if (selectedMandatoryOptionalValue && selectedMandatoryOptionalValue !== 'All') filters.push(`Requirement: ${selectedMandatoryOptionalValue}`);
+            if (selectedStatus) filters.push(`Status: ${selectedStatus}`);
+            if (selectedCategory) filters.push(`Category: ${selectedCategory}`);
+            if (selectedCriticality) filters.push(`Criticality: ${selectedCriticality}`);
+        }
+        
+        if (filters.length === 0) return;
+        return;
+    };
+
+    const filteredUsers = userSearchTerm.trim() === '' 
+        ? users 
+        : users.filter(user => 
+            user.name.toLowerCase().includes(userSearchTerm.toLowerCase())
+        );
+
+    if (!summary) return React.createElement("p", null, "Loading dashboard data...");
+
+    return (
+        React.createElement("div", null, 
+            // Filter row at the top
+            React.createElement("div", { className: "filters-row" },
+                // Time Period Filters
+                React.createElement("div", { className: "filter-group" },
+                    React.createElement("button", { 
+                        onClick: () => handleTimePeriodClick('All'),
+                        className: `filter-button ${selectedTimePeriod === 'All' ? 'active' : ''}`,
+                    }, "All"),
+                    React.createElement("button", { 
+                        onClick: () => handleTimePeriodClick('Current Month'),
+                        className: `filter-button ${selectedTimePeriod === 'Current Month' ? 'active' : ''}`,
+                    }, "Current Month"),
+                    React.createElement("button", { 
+                        onClick: () => handleTimePeriodClick('Previous Month'),
+                        className: `filter-button ${selectedTimePeriod === 'Previous Month' ? 'active' : ''}`,
+                    }, "Previous Month"),
+                    React.createElement("button", { 
+                        onClick: () => handleTimePeriodClick('Next Month'),
+                        className: `filter-button ${selectedTimePeriod === 'Next Month' ? 'active' : ''}`,
+                    }, "Next Month"),
+                    React.createElement("button", { 
+                        onClick: () => handleTimePeriodClick('Previous 3 Months'),
+                        className: `filter-button ${selectedTimePeriod === 'Previous 3 Months' ? 'active' : ''}`,
+                    }, "Previous 3 Months")
+                ),
+                
+                // Vertical divider
+                React.createElement("div", { className: "filter-divider" }),
+                
+                // Internal/External Filters
+                React.createElement("div", { className: "filter-group" },
+                    React.createElement("button", { 
+                        onClick: () => handleInternalExternalClick('All'),
+                        className: `filter-button ${selectedInternalExternalValue === 'All' ? 'active' : ''}`,
+                    }, "All"),
+                    React.createElement("button", { 
+                        onClick: () => handleInternalExternalClick('Internal'),
+                        className: `filter-button ${selectedInternalExternalValue === 'Internal' ? 'active' : ''}`,
+                    }, "Internal"),
+                    React.createElement("button", { 
+                        onClick: () => handleInternalExternalClick('External'),
+                        className: `filter-button ${selectedInternalExternalValue === 'External' ? 'active' : ''}`,
+                    }, "External")
+                ),
+                
+                // Vertical divider
+                React.createElement("div", { className: "filter-divider" }),
+                
+                // Mandatory/Optional Filters
+                React.createElement("div", { className: "filter-group" },
+                    React.createElement("button", { 
+                        onClick: () => handleMandatoryOptionalClick('All'),
+                        className: `filter-button ${selectedMandatoryOptionalValue === 'All' ? 'active' : ''}`,
+                    }, "All"),
+                    React.createElement("button", { 
+                        onClick: () => handleMandatoryOptionalClick('Mandatory'),
+                        className: `filter-button ${selectedMandatoryOptionalValue === 'Mandatory' ? 'active' : ''}`,
+                    }, "Mandatory"),
+                    React.createElement("button", { 
+                        onClick: () => handleMandatoryOptionalClick('Optional'),
+                        className: `filter-button ${selectedMandatoryOptionalValue === 'Optional' ? 'active' : ''}`,
+                    }, "Optional")
+                ),
+                
+                // User dropdown filter
+                React.createElement("div", { className: "filter-divider" }),
+                
+                React.createElement("div", { className: "filter-group" },
+                    React.createElement("div", { className: "user-dropdown" },
+                        React.createElement("button", { 
+                            onClick: () => setIsUserDropdownOpen(!isUserDropdownOpen),
+                            className: `filter-button ${selectedUser ? 'active' : ''}`,
+                        }, selectedUser ? `User: ${selectedUser.name || 'Unknown'}` : "Select User"),
+                            
+                        isUserDropdownOpen && React.createElement("div", { className: "dropdown-menu show" },
+                            // Search box for users
+                            React.createElement("div", { className: "dropdown-search" },
+                                React.createElement("input", {
+                                    type: "text",
+                                    placeholder: "Search users...",
+                                    value: userSearchTerm,
+                                    onChange: (e) => setUserSearchTerm(e.target.value)
+                                })
+                            ),
+                                
+                            // All users option
+                            React.createElement("button", {
+                                className: "dropdown-item",
+                                onClick: () => clearUserFilter()
+                            }, "All Users"),
+                                
+                            // List of users
+                            filteredUsers.length > 0 ? filteredUsers.map(user => (
+                                React.createElement("button", {
+                                    key: user.id,
+                                    className: "dropdown-item",
+                                    onClick: () => handleUserSelect(user.id, user.name)
+                                }, user.name)
+                            )) : React.createElement("div", { className: "dropdown-item" }, "No users found")
+                        )
+                    )
+                )
+            ),
+                
+            // Main dashboard grid
+            React.createElement("div", { className: "dashboard-grid" },
+                // Task Summary Section
+                React.createElement("div", { className: "card", style: { width: "200px" } },
+                    React.createElement("h3", { className: "dashboard-title" }, 
+                        selectedUser ? `${selectedUser.name}'s Tasks` : "Task Dashboard"
+                    ),
+                    React.createElement("div", null,
+                        TaskBox("Total Tasks", summary.total_tasks, "#6c757d", () => {
+                            // Reset all filters
+                            setSelectedStatus(null);
+                            setSelectedCategory(null);
+                            setSelectedCriticality(null);
+                            
+                            // Force immediate table update
+                            setTimeout(() => {
+                                // Check if summaryRef.current and detailed_data exist
+                                if (!summaryRef.current || !summaryRef.current.detailed_data) {
+                                    console.error("Summary data is not available");
+                                    return;
+                                }
+                                
+                                // Group all data
+                                const groupedData = {};
+                                summaryRef.current.detailed_data.forEach(item => {
+                                    const key = `${item.Entity}-${item.criticality}-${item.Task}-${item.calculated_status}-${item.regulation}`;
+                                    if (!groupedData[key]) {
+                                        groupedData[key] = { ...item, Count: 1 };
+                                    } else {
+                                        groupedData[key].Count += 1;
+                                    }
+                                });
+                                
+                                // Update the table data
+                                setFilteredTableData(Object.values(groupedData));
+                                console.log(`Reset filters and updated table with all ${Object.values(groupedData).length} records`);
+                            }, 0);
+                        }),
+                        TaskBox("Completed", summary.completed, "#007bff", () => {
+                            // Direct status filtering
+                            const status = "Completed";
+                            const newStatus = status === selectedStatus ? null : status;
+                            setSelectedStatus(newStatus);
+                            
+                            // Force immediate table update
+                            setTimeout(() => {
+                                // Check if summaryRef.current and detailed_data exist
+                                if (!summaryRef.current || !summaryRef.current.detailed_data) {
+                                    console.error("Summary data is not available");
+                                    return;
+                                }
+                                
+                                let filtered = [...summaryRef.current.detailed_data];
+                                
+                                // Apply the new status filter
+                                if (newStatus) {
+                                    filtered = filtered.filter(item => item.calculated_status === newStatus);
+                                }
+                                
+                                // Apply category filter if present
+                                if (selectedCategory) {
+                                    filtered = filtered.filter(item => item.category === selectedCategory);
+                                }
+                                
+                                // Apply criticality filter if present
+                                if (selectedCriticality) {
+                                    filtered = filtered.filter(item => item.criticality === selectedCriticality);
+                                }
+                                
+                                // Group the filtered data
+                                const groupedData = {};
+                                filtered.forEach(item => {
+                                    const key = `${item.Entity}-${item.criticality}-${item.Task}-${item.calculated_status}-${item.regulation}`;
+                                    if (!groupedData[key]) {
+                                        groupedData[key] = { ...item, Count: 1 };
+                                    } else {
+                                        groupedData[key].Count += 1;
+                                    }
+                                });
+                                
+                                // Update the table data
+                                setFilteredTableData(Object.values(groupedData));
+                                console.log(`Directly updated table with ${Object.values(groupedData).length} records after Completed click`);
+                            }, 0);
+                        }),
+                        TaskBox("Completed with Delay", summary.completed_with_delay, "#28a745", () => {
+                            // Direct status filtering
+                            const status = "Completed with Delay";
+                            const newStatus = status === selectedStatus ? null : status;
+                            setSelectedStatus(newStatus);
+                            
+                            // Force immediate table update
+                            setTimeout(() => {
+                                let filtered = [...summaryRef.current.detailed_data];
+                                
+                                // Apply the new status filter
+                                if (newStatus) {
+                                    filtered = filtered.filter(item => item.calculated_status === newStatus);
+                                }
+                                
+                                // Apply category filter if present
+                                if (selectedCategory) {
+                                    filtered = filtered.filter(item => item.category === selectedCategory);
+                                }
+                                
+                                // Apply criticality filter if present
+                                if (selectedCriticality) {
+                                    filtered = filtered.filter(item => item.criticality === selectedCriticality);
+                                }
+                                
+                                // Group the filtered data
+                                const groupedData = {};
+                                filtered.forEach(item => {
+                                    const key = `${item.Entity}-${item.criticality}-${item.Task}-${item.calculated_status}-${item.regulation}`;
+                                    if (!groupedData[key]) {
+                                        groupedData[key] = { ...item, Count: 1 };
+                                    } else {
+                                        groupedData[key].Count += 1;
+                                    }
+                                });
+                                
+                        // Update the table data
+                        setFilteredTableData(Object.values(groupedData));
+                        console.log(`Directly updated table with ${Object.values(groupedData).length} records after Completed with Delay click`);
+                    }, 0);
+                }),
+                        TaskBox("Ongoing", summary.ongoing, "#17a2b8", () => {
+                            // Direct status filtering
+                            const status = "Ongoing";
+                            const newStatus = status === selectedStatus ? null : status;
+                            setSelectedStatus(newStatus);
+                            
+                            // Force immediate table update
+                            setTimeout(() => {
+                                let filtered = [...summaryRef.current.detailed_data];
+                                
+                                // Apply the new status filter
+                                if (newStatus) {
+                                    filtered = filtered.filter(item => item.calculated_status === newStatus);
+                                }
+                                
+                                // Apply category filter if present
+                                if (selectedCategory) {
+                                    filtered = filtered.filter(item => item.category === selectedCategory);
+                                }
+                                
+                                // Apply criticality filter if present
+                                if (selectedCriticality) {
+                                    filtered = filtered.filter(item => item.criticality === selectedCriticality);
+                                }
+                                
+                                // Group the filtered data
+                                const groupedData = {};
+                                filtered.forEach(item => {
+                                    const key = `${item.Entity}-${item.criticality}-${item.Task}-${item.calculated_status}-${item.regulation}`;
+                                    if (!groupedData[key]) {
+                                        groupedData[key] = { ...item, Count: 1 };
+                                    } else {
+                                        groupedData[key].Count += 1;
+                                    }
+                                });
+                                
+                                // Update the table data
+                                setFilteredTableData(Object.values(groupedData));
+                                console.log(`Directly updated table with ${Object.values(groupedData).length} records after Ongoing click`);
+                            }, 0);
+                        }),
+                        TaskBox("Ongoing with Delay", summary.ongoing_with_delay, "#ffc107", () => {
+                            // Direct status filtering
+                            const status = "Ongoing with Delay";
+                            const newStatus = status === selectedStatus ? null : status;
+                            setSelectedStatus(newStatus);
+                            
+                            // Force immediate table update
+                            setTimeout(() => {
+                                let filtered = [...summaryRef.current.detailed_data];
+                                
+                                // Apply the new status filter
+                                if (newStatus) {
+                                    filtered = filtered.filter(item => item.calculated_status === newStatus);
+                                }
+                                
+                                // Apply category filter if present
+                                if (selectedCategory) {
+                                    filtered = filtered.filter(item => item.category === selectedCategory);
+                                }
+                                
+                                // Apply criticality filter if present
+                                if (selectedCriticality) {
+                                    filtered = filtered.filter(item => item.criticality === selectedCriticality);
+                                }
+                                
+                                // Group the filtered data
+                                const groupedData = {};
+                                filtered.forEach(item => {
+                                    const key = `${item.Entity}-${item.criticality}-${item.Task}-${item.calculated_status}-${item.regulation}`;
+                                    if (!groupedData[key]) {
+                                        groupedData[key] = { ...item, Count: 1 };
+                                    } else {
+                                        groupedData[key].Count += 1;
+                                    }
+                                });
+                                
+                                // Update the table data
+                                setFilteredTableData(Object.values(groupedData));
+                                console.log(`Directly updated table with ${Object.values(groupedData).length} records after Ongoing with Delay click`);
+                            }, 0);
+                        }),
+                        TaskBox("Due", summary.due, "#dc3545", () => {
+                            // Direct status filtering
+                            const status = "Due";
+                            const newStatus = status === selectedStatus ? null : status;
+                            setSelectedStatus(newStatus);
+                            
+                            // Force immediate table update
+                            setTimeout(() => {
+                                let filtered = [...summaryRef.current.detailed_data];
+                                
+                                // Apply the new status filter
+                                if (newStatus) {
+                                    filtered = filtered.filter(item => item.calculated_status === newStatus);
+                                }
+                                
+                                // Apply category filter if present
+                                if (selectedCategory) {
+                                    filtered = filtered.filter(item => item.category === selectedCategory);
+                                }
+                                
+                                // Apply criticality filter if present
+                                if (selectedCriticality) {
+                                    filtered = filtered.filter(item => item.criticality === selectedCriticality);
+                                }
+                                
+                                // Group the filtered data
+                                const groupedData = {};
+                                filtered.forEach(item => {
+                                    const key = `${item.Entity}-${item.criticality}-${item.Task}-${item.calculated_status}-${item.regulation}`;
+                                    if (!groupedData[key]) {
+                                        groupedData[key] = { ...item, Count: 1 };
+                                    } else {
+                                        groupedData[key].Count += 1;
+                                    }
+                                });
+                                
+                                // Update the table data
+                                setFilteredTableData(Object.values(groupedData));
+                                console.log(`Directly updated table with ${Object.values(groupedData).length} records after Due click`);
+                            }, 0);
+                        }),
+                        TaskBox("Due with Delay", summary.due_with_delay, "#fd7e14", () => {
+                            // Direct status filtering
+                            const status = "Due with Delay";
+                            const newStatus = status === selectedStatus ? null : status;
+                            setSelectedStatus(newStatus);
+                            
+                            // Force immediate table update
+                            setTimeout(() => {
+                                let filtered = [...summaryRef.current.detailed_data];
+                                
+                                // Apply the new status filter
+                                if (newStatus) {
+                                    filtered = filtered.filter(item => item.calculated_status === newStatus);
+                                }
+                                
+                                // Apply category filter if present
+                                if (selectedCategory) {
+                                    filtered = filtered.filter(item => item.category === selectedCategory);
+                                }
+                                
+                                // Apply criticality filter if present
+                                if (selectedCriticality) {
+                                    filtered = filtered.filter(item => item.criticality === selectedCriticality);
+                                }
+                                
+                                // Group the filtered data
+                                const groupedData = {};
+                                filtered.forEach(item => {
+                                    const key = `${item.Entity}-${item.criticality}-${item.Task}-${item.calculated_status}-${item.regulation}`;
+                                    if (!groupedData[key]) {
+                                        groupedData[key] = { ...item, Count: 1 };
+                                    } else {
+                                        groupedData[key].Count += 1;
+                                    }
+                                });
+                                
+                                // Update the table data
+                                setFilteredTableData(Object.values(groupedData));
+                                console.log(`Directly updated table with ${Object.values(groupedData).length} records after Due with Delay click`);
+                            }, 0);
+                        })
+                    )
+                ),
+              
+                // Charts Container
+                React.createElement("div", { className: "charts-container" },
+                    // Top row with Pie Chart and Bar Chart side by side
+                    React.createElement("div", { className: "top-charts-row" },
+                        // Pie Chart
+                        React.createElement("div", { className: "card" },
+                            React.createElement("div", { className: "chart-container" },
+                                React.createElement("canvas", { ref: pieChartRef })
+                            )
+                        ),
+                        
+                        // Bar Chart
+                        React.createElement("div", { className: "card" },
+                            React.createElement("div", { className: "chart-container" },
+                                React.createElement("canvas", { ref: barChartRef })
+                            )
+                        )
+                    ),
+                    
+                    // Bottom row with Criticality Chart and Details Table
+                    React.createElement("div", { className: "bottom-charts-row" },
+                        // Criticality Chart
+                        React.createElement("div", { className: "card" },
+                            React.createElement("div", { className: "chart-container", style: { height: "300px" } },
+                                React.createElement("canvas", { ref: criticalityChartRef })
+                            )
+                        ),
+                        
+                        // Details Table
+                        React.createElement("div", { className: "card" },
+                            React.createElement("h3", { className: "table-heading" },
+                                window.segmentFiltered || selectedStatus || selectedCategory || selectedCriticality ? 
+                                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                                        React.createElement("span", null, 
+                                            window.segmentFiltered ? 
+                                                `Filtered by Segment: ${window.segmentFiltered.status || ''} ${window.segmentFiltered.category || ''} ${window.segmentFiltered.criticality || ''}` :
+                                                "Filtered by: " + 
+                                                (selectedStatus ? `Status: ${selectedStatus} ` : "") + 
+                                                (selectedCategory ? `Category: ${selectedCategory} ` : "") + 
+                                                (selectedCriticality ? `Criticality: ${selectedCriticality}` : "")
+                                        ),
+                                        React.createElement("button", { 
+                                            onClick: () => {
+                                                // Clear segment filter flag
+                                                window.segmentFiltered = null;
+                                                
+                                                // Clear state filters
+                                                setSelectedStatus(null);
+                                                setSelectedCategory(null);
+                                                setSelectedCriticality(null);
+                                                
+                                                // Force immediate table update to show all data
+                                                setTimeout(() => {
+                                                    // Check if summaryRef.current and detailed_data exist
+                                                    if (!summaryRef.current || !summaryRef.current.detailed_data) {
+                                                        console.error("Summary data is not available");
+                                                        return;
+                                                    }
+                                                    
+                                                    // Group all data
+                                                    const groupedData = {};
+                                                    summaryRef.current.detailed_data.forEach(item => {
+                                                        const key = `${item.Entity}-${item.criticality}-${item.Task}-${item.calculated_status}-${item.regulation}`;
+                                                        if (!groupedData[key]) {
+                                                            groupedData[key] = { ...item, Count: 1 };
+                                                        } else {
+                                                            groupedData[key].Count += 1;
+                                                        }
+                                                    });
+                                                    
+                                                    // Update the table data
+                                                    setFilteredTableData(Object.values(groupedData));
+                                                    console.log(`Reset filters and updated table with all ${Object.values(groupedData).length} records`);
+                                                }, 0);
+                                            },
+                                            style: {
+                                                padding: "4px 8px",
+                                                backgroundColor: "#dc3545",
+                                                color: "white",
+                                                border: "none",
+                                                borderRadius: "4px",
+                                                cursor: "pointer",
+                                                fontSize: "12px"
+                                            }
+                                        }, "Clear Filters")
+                                    )
+                                    : "Task Details"
+                            ),
+                            React.createElement("div", { className: "filter-info" }, 
+                                getActiveFilterMessage()
+                            ),
+                            React.createElement("div", { className: "table-container" },
+                                React.createElement("table", { className: "details-table" },
+                                    React.createElement("thead", null,
+                                        React.createElement("tr", null,
+                                            React.createElement("th", null, "Entity"),
+                                            React.createElement("th", null, "Criticality"),
+                                            React.createElement("th", null, "Task"),
+                                            React.createElement("th", null, "Status"),
+                                            React.createElement("th", null, "Count")
+                                        )
+                                    ),
+                                    React.createElement("tbody", null,
+                                        filteredTableData.length > 0 ?
+                                            filteredTableData.map((row, index) => 
+                                                React.createElement("tr", { key: index },
+                                                    React.createElement("td", { className: "entity-cell" }, row.Entity),
+                                                    React.createElement("td", null, row.criticality),
+                                                    React.createElement("td", null, row.Task),
+                                                    React.createElement("td", null, row.calculated_status),
+                                                    React.createElement("td", null, row.Count)
+                                                )
+                                            ) :
+                                            React.createElement("tr", null,
+                                                React.createElement("td", { colSpan: 5, style: { textAlign: "center" } }, 
+                                                    window.segmentFiltered ?
+                                                        `No data available for the selected segment: ${window.segmentFiltered.status || ''} ${window.segmentFiltered.category || ''} ${window.segmentFiltered.criticality || ''}` :
+                                                        (selectedStatus || selectedCategory || selectedCriticality ?
+                                                            `No data available for the selected filters: ${selectedStatus ? 'Status: ' + selectedStatus + ' ' : ''}${selectedCategory ? 'Category: ' + selectedCategory + ' ' : ''}${selectedCriticality ? 'Criticality: ' + selectedCriticality : ''}` :
+                                                            "No data available. Click on chart segments to view details.")
+                                                )
+                                            )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    );
+}
+
+function TaskBox(label, count, color, onClick = null) {
+    return React.createElement("div", {
+        className: "task-box",
+        style: { backgroundColor: color },
+        onClick: onClick
+    }, label, React.createElement("span", null, count));
+}
+
+function App() {
+    return React.createElement(TaskDashboard, { factoryId: "KOTH001" });
+}
+
+ReactDOM.render(React.createElement(App), document.getElementById("dashboard-container"));
+    </script>
+</body>
+</html>

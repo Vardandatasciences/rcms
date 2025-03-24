@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify, render_template, send_file
 from flask_cors import CORS
 # from models import db
 from config import Config
@@ -10,6 +10,7 @@ from routes.activities import activities_bp
 from routes.categories import categories_bp
 from routes.holidays import holidays_bp
 from routes.tasks import tasks_bp
+from routes.analysis import analysis_bp
 from models.models import *
 
 def create_app(config_class=Config):
@@ -31,6 +32,7 @@ def create_app(config_class=Config):
     app.register_blueprint(categories_bp)
     app.register_blueprint(holidays_bp)
     app.register_blueprint(tasks_bp)
+    app.register_blueprint(analysis_bp, url_prefix='/api/analysis')
     
     # Create database tables if they don't exist
     with app.app_context():
@@ -40,6 +42,22 @@ def create_app(config_class=Config):
 
 # Create the application instance
 app = create_app()
+
+@app.route('/')
+def serve_dashboard():
+    return render_template('index.html')
+
+@app.route('/api/task-summary/<factory_id>')
+def get_task_summary(factory_id):
+    # For testing, return some dummy data
+    dummy_data = {
+        "total_tasks": 10,
+        "completed": 5,
+        "ongoing": 3,
+        "due": 2,
+        "factory_id": factory_id
+    }
+    return jsonify(dummy_data)
 
 if __name__ == '__main__':
     app.run(debug=True) 
