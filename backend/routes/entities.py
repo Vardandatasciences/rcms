@@ -1,7 +1,8 @@
 from flask import Blueprint, jsonify, request
 from models import db
-from models.models import EntityMaster, Users,CountryCodes
+from models.models import EntityMaster, Users,CountryCodes,EntityRegulation,RegulationMaster,ActivityMaster
 import traceback
+import bcrypt
 
 entities_bp = Blueprint('entities', __name__)
 
@@ -44,6 +45,9 @@ def add_entity():
         # Extract admin data
         admin_email = data.pop("admin_email", None)
         admin_password = data.pop("admin_password", None)
+        
+        # Extract selected regulations
+        selected_regulations = data.pop("selected_regulations", [])
 
         # Ensure all required fields exist (except entity_id, which is auto-generated)
         required_fields = [
@@ -80,7 +84,7 @@ def add_entity():
         # Create admin user for this entity
         if admin_email and admin_password:
             # Generate user_id from contact_name
-            user_id = data["contact_name"].replace(" ", "")[:8].upper()
+            user_id = data["contact_name"].replace(" ", "")[:8]
             
             # Check if user_id already exists
             existing_user = Users.query.filter_by(user_id=user_id).first()
@@ -91,21 +95,53 @@ def add_entity():
                     count += 1
                 user_id = f"{user_id}{count}"
             
+            # Hash the password with bcrypt
+            hashed_password = bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt())
+            
             # Create new admin user
             new_admin = Users(
                 user_id=user_id,
                 entity_id=new_entity_id,
                 user_name=data["contact_name"],
                 address=data.get("location", ""),
-                mobile_no=data["contact_phno"],
+                mobile_no=data["contact_phno"],  # This now includes country code
                 email_id=admin_email,
-                password=admin_password,
+                password=hashed_password.decode('utf-8'),  # Store the hashed password
                 role="Admin",
                 obsolete_current=None
             )
             
             db.session.add(new_admin)
         
+        # Add selected regulations to entity_regulation table
+        for regulation_id in selected_regulations:
+            # Get regulation details to determine mandatory/optional activities
+            regulation = RegulationMaster.query.get(regulation_id)
+            if regulation:
+                # Count mandatory and optional activities where obsolete_current is NOT 'O' or is NULL
+                mandatory_count = ActivityMaster.query.filter(
+                    ActivityMaster.regulation_id == regulation_id,
+                    ActivityMaster.mandatory_optional == "M",
+                    (ActivityMaster.obsolete_current != "O") | (ActivityMaster.obsolete_current.is_(None))
+                ).count()
+                
+                optional_count = ActivityMaster.query.filter(
+                    ActivityMaster.regulation_id == regulation_id,
+                    ActivityMaster.mandatory_optional == "O",
+                    (ActivityMaster.obsolete_current != "O") | (ActivityMaster.obsolete_current.is_(None))
+                ).count()
+
+                # Create entity_regulation record with obsolete_current as NULL
+                entity_regulation = EntityRegulation(
+                    entity_id=new_entity_id,
+                    regulation_id=regulation_id,
+                    mandatory_activities=mandatory_count,
+                    optional_activities=optional_count,
+                    obsolete_current=None  # Keeping NULL instead of 'C'
+                )
+                db.session.add(entity_regulation)
+
+        # Commit the session after adding all records
         db.session.commit()
 
         return jsonify({"message": "Entity added successfully", "entity_id": new_entity_id}), 201

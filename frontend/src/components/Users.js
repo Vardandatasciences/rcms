@@ -495,6 +495,7 @@ const Users = () => {
                   >
                     <option value="Admin">Admin</option>
                     <option value="User">User</option>
+               
                   </select>
                 </div>
               </div>

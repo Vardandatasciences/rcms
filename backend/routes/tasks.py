@@ -4,7 +4,7 @@ from models.models import EntityRegulationTasks, RegulationMaster, ActivityMaste
 from sqlalchemy import or_
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-import traceback
+import traceback,os
 
 tasks_bp = Blueprint('tasks', __name__)
 
@@ -549,4 +549,109 @@ def get_entity_regulation_tasks(entity_id):
     except Exception as e:
         print("Error:", str(e))
         print(traceback.format_exc())  # Print full traceback for debugging
+        return jsonify({"error": str(e)}), 500
+
+@tasks_bp.route('/update_task', methods=['POST'])
+def update_task():
+    try:
+        # Check if the request contains form data
+        if 'id' not in request.form:
+            return jsonify({"error": "Missing task ID"}), 400
+       
+        task_id = request.form.get('id')
+       
+        # Find the task
+        task = EntityRegulationTasks.query.get(task_id)
+        if not task:
+            return jsonify({"error": "Task not found"}), 404
+ 
+        # Update assigner fields
+        if 'status' in request.form:
+            status = request.form.get('status')
+            remarks = request.form.get('remarks')
+           
+            task.status = status
+            if remarks is not None:
+                task.remarks = remarks
+           
+            # Set dates based on status
+            if status == 'WIP' and not task.start_date:
+                task.start_date = datetime.now().date()
+            elif status == 'Completed' and not task.end_date:
+                task.end_date = datetime.now().date()
+ 
+            # Handle assigner file upload
+            if 'upload' in request.files:
+                file = request.files['upload']
+                if file and file.filename:
+                    filename = f"{task.entity_id}_{task.regulation_id}_{task.activity_id}_task_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                    if not os.path.exists('uploads'):
+                        os.makedirs('uploads')
+                    file_path = os.path.join('uploads', filename)
+                    file.save(file_path)
+                    task.upload = file_path
+ 
+        # Update reviewer fields
+        if 'review_status' in request.form:
+            review_status = request.form.get('review_status')
+            review_remarks = request.form.get('review_remarks')
+           
+            # Add review_status column if it doesn't exist
+            try:
+                from sqlalchemy import text
+                with db.engine.connect() as connection:
+                    connection.execute(text("ALTER TABLE entity_regulation_tasks ADD COLUMN IF NOT EXISTS review_status VARCHAR(20)"))
+                    connection.commit()
+            except Exception as e:
+                print("Error adding review_status column:", str(e))
+                # Continue even if column already exists
+           
+            # Set review status using setattr to handle potential missing column
+            setattr(task, 'review_status', review_status)
+            if review_remarks is not None:
+                task.review_remarks = review_remarks
+           
+            # Set review dates based on status
+            if review_status == 'WIP' and not task.review_start_date:
+                task.review_start_date = datetime.now().date()
+            elif review_status == 'Completed' and not task.review_end_date:
+                task.review_end_date = datetime.now().date()
+ 
+            # Handle reviewer file upload
+            if 'review_upload' in request.files:
+                review_file = request.files['review_upload']
+                if review_file and review_file.filename:
+                    review_filename = f"{task.entity_id}_{task.regulation_id}_{task.activity_id}_review_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                    if not os.path.exists('uploads'):
+                        os.makedirs('uploads')
+                    review_file_path = os.path.join('uploads', review_filename)
+                    review_file.save(review_file_path)
+                    task.review_upload = review_file_path
+       
+        db.session.commit()
+       
+        # Get review_status safely using getattr with default value
+        review_status_value = getattr(task, 'review_status', None)
+       
+        return jsonify({
+            "message": "Task updated successfully",
+            "task": {
+                "id": task.id,
+                "status": task.status,
+                "remarks": task.remarks,
+                "review_status": review_status_value,
+                "review_remarks": task.review_remarks,
+                "upload": task.upload,
+                "review_upload": task.review_upload,
+                "start_date": task.start_date.strftime('%Y-%m-%d') if task.start_date else None,
+                "end_date": task.end_date.strftime('%Y-%m-%d') if task.end_date else None,
+                "review_start_date": task.review_start_date.strftime('%Y-%m-%d') if task.review_start_date else None,
+                "review_end_date": task.review_end_date.strftime('%Y-%m-%d') if task.review_end_date else None
+            }
+        }), 200
+   
+    except Exception as e:
+        print("Error:", str(e))
+        print(traceback.format_exc())
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500

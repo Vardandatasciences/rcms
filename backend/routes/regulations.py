@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from models import db
-from models.models import RegulationMaster, EntityRegulation, Category
+from models.models import RegulationMaster, EntityRegulation, Category,ActivityMaster
 import traceback
 from sqlalchemy.orm import aliased
 
@@ -210,4 +210,82 @@ def delete_regulation(regulation_id):
 
     except Exception as e:
         print("Error:", str(e))
+        return jsonify({"error": str(e)}), 500
+    
+@regulations_bp.route('/add_entity_regulations', methods=['POST', 'OPTIONS'])
+def add_entity_regulations():
+    if request.method == 'OPTIONS':
+        # Handle preflight request
+        response = jsonify({'message': 'OK'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        return response
+        
+    try:
+        data = request.json
+        entity_id = data.get('entity_id')
+        regulation_ids = data.get('regulation_ids', [])
+        
+        if not entity_id:
+            return jsonify({"error": "Entity ID is required"}), 400
+        
+        if not regulation_ids:
+            return jsonify({"error": "At least one regulation ID is required"}), 400
+        
+        # First, get all existing entity regulations
+        existing_regulations = EntityRegulation.query.filter_by(entity_id=entity_id).all()
+        existing_regulation_ids = [reg.regulation_id for reg in existing_regulations]
+        
+        # Identify regulations to add and remove
+        regulations_to_add = [reg_id for reg_id in regulation_ids if reg_id not in existing_regulation_ids]
+        regulations_to_remove = [reg_id for reg_id in existing_regulation_ids if reg_id not in regulation_ids]
+        
+        # Add new regulations
+        for regulation_id in regulations_to_add:
+            # Count mandatory and optional activities
+            mandatory_count = ActivityMaster.query.filter(
+                ActivityMaster.regulation_id == regulation_id,
+                ActivityMaster.mandatory_optional == "M",
+                (ActivityMaster.obsolete_current != "O") | (ActivityMaster.obsolete_current.is_(None))
+            ).count()
+            
+            optional_count = ActivityMaster.query.filter(
+                ActivityMaster.regulation_id == regulation_id,
+                ActivityMaster.mandatory_optional == "O",
+                (ActivityMaster.obsolete_current != "O") | (ActivityMaster.obsolete_current.is_(None))
+            ).count()
+            
+            # Create new entity regulation
+            new_entity_regulation = EntityRegulation(
+                entity_id=entity_id,
+                regulation_id=regulation_id,
+                mandatory_activities=mandatory_count,
+                optional_activities=optional_count,
+                obsolete_current=None
+            )
+            db.session.add(new_entity_regulation)
+        
+        # Mark removed regulations as obsolete
+        for regulation_id in regulations_to_remove:
+            entity_regulation = EntityRegulation.query.filter_by(
+                entity_id=entity_id,
+                regulation_id=regulation_id
+            ).first()
+            
+            if entity_regulation:
+                entity_regulation.obsolete_current = 'O'
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Entity regulations updated successfully",
+            "added": len(regulations_to_add),
+            "removed": len(regulations_to_remove)
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print("Error:", str(e))
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
