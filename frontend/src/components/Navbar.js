@@ -141,6 +141,17 @@ const Navbar = () => {
               </li>
             )}
 
+            {/* Activities - Visible to Global and Admin */}
+            {(user.role === 'Global' || user.role === 'Admin') && (
+              <li className="nav-item">
+                <Link to="/activities" className={`nav-link ${isActive('/activities') ? 'active' : ''}`}>
+                  <FaClipboardList className="nav-icon" />
+                  <span className="nav-text">Activities</span>
+                  {isActive('/activities') && <div className="nav-indicator"></div>}
+                </Link>
+              </li>
+            )}
+
             {/* Activities - Visible to all roles */}
             <li className="nav-item">
               <a 
