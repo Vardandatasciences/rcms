@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RCMS Analysis</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background-color: #ffffff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 15px 0;
+            margin-bottom: 30px;
+        }
+        h1 {
+            color: #1a73e8;
+            margin: 0;
+            padding: 10px 20px;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            transition: transform 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .card h2 {
+            margin-top: 0;
+            color: #1a73e8;
+            font-size: 1.2rem;
+        }
+        .chart-container {
+            height: 200px;
+            background-color: #e9f2fe;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        .chart-placeholder {
+            color: #5f6368;
+            font-style: italic;
+        }
+        .return-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .return-link:hover {
+            text-decoration: underline;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        th {
+            background-color: #f2f6fd;
+            color: #1a73e8;
+            font-weight: 500;
+        }
+        tr:hover {
+            background-color: #f5f9ff;
+        }
+        .users-container {
+            margin-top: 30px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+        }
+        .error-message {
+            color: #d93025;
+            padding: 15px;
+            background-color: #fce8e6;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .status-active {
+            color: #34a853;
+            font-weight: 500;
+        }
+        .status-inactive {
+            color: #d93025;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>RCMS Analysis Dashboard</h1>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="dashboard">
+            <div class="card">
+                <h2>Compliance Overview</h2>
+                <p>Current compliance rate across all regulations and activities.</p>
+                <div class="chart-container">
+                    <span class="chart-placeholder">Compliance Chart</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>Task Completion</h2>
+                <p>Monthly task completion rates and trends.</p>
+                <div class="chart-container">
+                    <span class="chart-placeholder">Task Completion Chart</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>Regulation Status</h2>
+                <p>Status breakdown of all regulations by category.</p>
+                <div class="chart-container">
+                    <span class="chart-placeholder">Regulation Status Chart</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>Activity Timeline</h2>
+                <p>Timeline of upcoming and past activities.</p>
+                <div class="chart-container">
+                    <span class="chart-placeholder">Activity Timeline</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="users-container">
+            <h2>User Information</h2>
+            <div id="users-table-container">
+                <div class="loading">Loading user data...</div>
+            </div>
+        </div>
+        
+        <a href="/" class="return-link">← Return to Dashboard</a>
+    </div>
+
+    <script>
+        // Get the backend API URL - adjust as needed
+        const API_BASE_URL = 'http://localhost:5000';
+        
+        // Function to fetch users data from the backend
+        async function fetchUsersData() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/analysis/users`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error fetching users data:', error);
+                throw error;
+            }
+        }
+        
+        // Function to render users table
+        function renderUsersTable(usersData) {
+            const container = document.getElementById('users-table-container');
+            
+            if (!usersData.success) {
+                container.innerHTML = `
+                    <div class="error-message">
+                        Failed to load user data: ${usersData.error || 'Unknown error'}
+                    </div>
+                `;
+                return;
+            }
+            
+            const users = usersData.users;
+            
+            if (users.length === 0) {
+                container.innerHTML = '<p>No users found.</p>';
+                return;
+            }
+            
+            // Create the table
+            const table = document.createElement('table');
+            
+            // Create table header
+            const thead = document.createElement('thead');
+            thead.innerHTML = `
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Entity</th>
+                    <th>Email</th>
+                    <th>Mobile</th>
+                    <th>Role</th>
+                </tr>
+            `;
+            table.appendChild(thead);
+            
+            // Create table body
+            const tbody = document.createElement('tbody');
+            
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.user_id}</td>
+                    <td>${user.user_name || '-'}</td>
+                    <td>${user.entity_name || '-'}</td>
+                    <td>${user.email_id || '-'}</td>
+                    <td>${user.mobile_no || '-'}</td>
+                    <td>${user.role || '-'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            table.appendChild(tbody);
+            
+            // Add table to container
+            container.innerHTML = '';
+            container.appendChild(table);
+        }
+        
+        // Load users data when page loads
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const usersData = await fetchUsersData();
+                renderUsersTable(usersData);
+            } catch (error) {
+                const container = document.getElementById('users-table-container');
+                container.innerHTML = `
+                    <div class="error-message">
+                        Error loading user data: ${error.message}
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html> 

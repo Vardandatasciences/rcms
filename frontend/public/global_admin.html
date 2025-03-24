@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@17/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@17/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 24px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .global-admin-charts-container {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            width: 100%;
+        }
+
+        .top-charts-row, .bottom-charts-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(400px, 1fr));
+            gap: 24px;
+        }
+
+        .chart-container {
+            height: 300px;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .table-container {
+            max-height: 350px;
+            overflow-y: auto;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .entity-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            z-index: 1000;
+            display: block;
+            min-width: 200px;
+            padding: 8px 0;
+            margin: 2px 0 0;
+            background-color: white;
+            border: 1px solid rgba(0,0,0,.15);
+            border-radius: 4px;
+            box-shadow: 0 6px 12px rgba(0,0,0,.175);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .dropdown-search {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .dropdown-search input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .dropdown-item {
+            display: block;
+            width: 100%;
+            padding: 8px 16px;
+            clear: both;
+            font-weight: 400;
+            color: #212529;
+            text-align: inherit;
+            white-space: nowrap;
+            background-color: transparent;
+            border: 0;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .dropdown-item.active {
+            background-color: #e9ecef;
+        }
+
+        .task-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .task-box:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .filters-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px 24px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 123, 255, 0.1);
+            margin: 0 auto 24px auto;
+            max-width: 1600px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .filter-button {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            color: #495057;
+        }
+
+        .filter-button:hover {
+            background-color: #e9ecef;
+            border-color: #ced4da;
+        }
+
+        .filter-button.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #0056b3;
+        }
+
+        .details-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: white;
+            font-size: 12px;
+        }
+
+        .details-table th, .details-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .details-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            font-size: 13px;
+        }
+
+        .details-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .top-charts-row, .bottom-charts-row {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-container, .table-container {
+                max-width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .filters-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-divider {
+                display: none;
+            }
+            
+            .filter-group {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+
+        .refresh-button {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            margin-bottom: 12px;
+        }
+
+        .refresh-button:hover {
+            background-color: #5a6268;
+            transform: translateY(-1px);
+        }
+
+        .refresh-button svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .refresh-button.refreshing {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .refresh-button.refreshing svg {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .table-header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 0 12px;
+        }
+
+        /* Add styles for criticality colors */
+        .criticality-high {
+            color: #dc3545;
+            font-weight: 500;
+        }
+
+        .criticality-medium {
+            color: #fd7e14;
+            font-weight: 500;
+        }
+
+        .criticality-low {
+            color: #ffc107;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div id="dashboard-container"></div>
+
+    <script>
+        const { useState, useEffect, useRef } = React;
+
+function TaskDashboard({ factoryId }) {
+    // Initialize segmentFiltered in window object
+    if (typeof window !== 'undefined' && !window.hasOwnProperty('segmentFiltered')) {
+        window.segmentFiltered = null;
+    }
+
+    const [summary, setSummary] = useState(null);
+    const summaryRef = useRef(null);
+    const [selectedStatus, setSelectedStatus] = useState(null);
+    const [selectedCategory, setSelectedCategory] = useState(null);
+    const [selectedCriticality, setSelectedCriticality] = useState(null);
+    const [filteredTableData, setFilteredTableData] = useState([]);
+    const pieChartRef = useRef(null);
+    const barChartRef = useRef(null);
+    const criticalityChartRef = useRef(null);
+    const pieChartInstance = useRef(null);
+    const barChartInstance = useRef(null);
+    const criticalityChartInstance = useRef(null);
+    const [selectedTimePeriod, setSelectedTimePeriod] = useState('All');
+    const [selectedInternalExternalValue, setSelectedInternalExternalValue] = useState('All');
+    const [selectedMandatoryOptionalValue, setSelectedMandatoryOptionalValue] = useState('All');
+    const [taskData, setTaskData] = useState([]);
+    const [filteredData, setFilteredData] = useState([]);
+    const [entities, setEntities] = useState([]);
+    const [isEntityDropdownOpen, setIsEntityDropdownOpen] = useState(false);
+    const [selectedEntity, setSelectedEntity] = useState(null);
+    const [availableStatuses, setAvailableStatuses] = useState([]);
+    const [availableCategories, setAvailableCategories] = useState([]);
+    const [availableCriticalities, setAvailableCriticalities] = useState([]);
+    const [entitySearchTerm, setEntitySearchTerm] = useState('');
+    const [availableEntities, setAvailableEntities] = useState([]);
+
+    // Function to fetch entities
+    const fetchEntities = async () => {
+        try {
+            console.log("Fetching entities...");
+            const response = await axios.get('http://localhost:5000/api/entities', {
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+            console.log("Raw API Response:", response);
+            
+            if (response.data && Array.isArray(response.data)) {
+                console.log("Setting entities:", response.data);
+                setEntities(response.data);
+            } else {
+                console.error("Invalid entities data format:", response.data);
+            }
+        } catch (error) {
+            console.error("Error fetching entities:", error.response || error);
+        }
+    };
+
+    // Initial data load
+    useEffect(() => {
+        console.log("Initial useEffect running");
+        fetchEntities();
+        fetchData();
+    }, []);
+
+    // Function to clear entity filter
+    const clearEntityFilter = () => {
+        setSelectedEntity(null);
+        setEntitySearchTerm('');
+        setIsEntityDropdownOpen(false);
+        fetchData();
+    };
+
+    // Function to handle entity selection
+    const handleEntitySelect = (entityId, entityName) => {
+        console.log("Selecting entity:", { id: entityId, name: entityName });
+        setSelectedEntity({ id: entityId, name: entityName });
+        setIsEntityDropdownOpen(false);
+        fetchData();
+    };
+
+    // Add click outside handler to close dropdown
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            const dropdown = document.querySelector('.entity-dropdown');
+            if (dropdown && !dropdown.contains(event.target)) {
+                setIsEntityDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    // Filter entities based on search term
+    const filteredEntities = entitySearchTerm.trim() === '' 
+        ? entities 
+        : entities.filter(entity => 
+            entity.name.toLowerCase().includes(entitySearchTerm.toLowerCase())
+        );
+
+    console.log("Current entities state:", entities);
+    // console.log("Filtered entities:", filteredEntities);
+
+    // Function to fetch data
+    const fetchData = async () => {
+        try {
+            const params = {
+                time_period: selectedTimePeriod,
+                internal_external: selectedInternalExternalValue,
+                mandatory_optional: selectedMandatoryOptionalValue,
+                entity_id: selectedEntity ? selectedEntity.id : 'JORABARU'
+            };
+
+            console.log('=== Fetching Data ===');
+            console.log('Request Params:', params);
+
+            const response = await axios.get('http://localhost:5000/api/global-task-summary', { params });
+            
+            console.log('=== API Response ===');
+            console.log('Raw Response:', response);
+            console.log('Response Data:', response.data);
+            console.log('Detailed Data:', response.data?.detailed_data);
+
+            if (!response.data) {
+                console.error("No data received from API");
+                return;
+            }
+
+            // Transform and log the transformed data
+            const transformedData = {
+                ...response.data,
+                detailed_data: response.data.detailed_data?.map(item => ({
+                    entity_name: item.Entity || item.entity_name,
+                    category: item.Category || item.category || item.task_category,
+                    criticality: item.Criticality || item.criticality,
+                    task_name: item.Task || item.task_name,
+                    status: item.calculated_status || item.status,
+                    count: item.Count || item.count || 1
+                }))
+            };
+
+            console.log('=== Transformed Data ===');
+            console.log('Transformed:', transformedData);
+
+            setSummary(transformedData);
+            summaryRef.current = transformedData;
+                
+                // Extract available filters
+            if (transformedData.detailed_data) {
+                extractAvailableFilters(transformedData);
+            }
+
+            // Update visualizations
+            if (pieChartRef.current) {
+                createOrUpdatePieChart(transformedData);
+            }
+            if (barChartRef.current) {
+                createOrUpdateCategoryChart(transformedData);
+            }
+            if (criticalityChartRef.current) {
+                createOrUpdateCriticalityChart(transformedData);
+            }
+                
+                // Update table data
+            if (transformedData.detailed_data) {
+                updateTableData(transformedData.detailed_data);
+            }
+
+        } catch (error) {
+                console.error("Error fetching global task summary:", error);
+                setSummary(null);
+        }
+    };
+
+    // Effect to refetch data when filters change
+    useEffect(() => {
+        console.log("Filter changed, fetching new data:", {
+            timePeriod: selectedTimePeriod,
+            internalExternal: selectedInternalExternalValue,
+            mandatoryOptional: selectedMandatoryOptionalValue,
+            entity: selectedEntity ? selectedEntity.name : 'Default'
+        });
+        fetchData();
+    }, [selectedTimePeriod, selectedInternalExternalValue, selectedMandatoryOptionalValue, selectedEntity]);
+
+    // Effect to update table data when filters change
+    useEffect(() => {
+        if (summaryRef.current && summaryRef.current.detailed_data) {
+            updateTableData(summaryRef.current.detailed_data);
+        }
+    }, [selectedStatus, selectedCategory, selectedCriticality]);
+
+    const extractAvailableFilters = (data) => {
+        if (!data || !data.detailed_data) return;
+        
+        const statuses = new Set();
+        const categories = new Set();
+        const criticalities = new Set();
+        const entities = new Set(); // New Set to track entities
+
+        data.detailed_data.forEach(item => {
+            if (item.calculated_status) statuses.add(item.calculated_status);
+            if (item.category) categories.add(item.category);
+            if (item.criticality) criticalities.add(item.criticality);
+            if (item.entity_name) entities.add(item.entity_name); // Assuming entity_name is available
+        });
+
+        setAvailableStatuses(Array.from(statuses));
+        setAvailableCategories(Array.from(categories));
+        setAvailableCriticalities(Array.from(criticalities));
+        setAvailableEntities(Array.from(entities)); // Add entity filter
+    };
+
+    const updateTableData = (data) => {
+        if (!data || !Array.isArray(data)) {
+            console.error("Invalid data received:", data);
+            setFilteredTableData([]);
+            return;
+        }
+        
+        console.log("Updating table with data:", data); // Debug log
+        
+        let filteredData = data.map(item => ({
+            entity_name: item.Entity || item.entity_name || item.EntityName || '',
+            category: item.Category || item.category || item.task_category || item.TaskCategory || '',
+            criticality: item.Criticality || item.criticality || item.TaskCriticality || '',
+            task_name: item.Task || item.task_name || item.TaskName || '',
+            status: item.Status || item.status || item.calculated_status || item.task_status || '',
+            count: item.Count || item.count || 1
+        }));
+        
+        // Apply status filter
+        if (selectedStatus) {
+            filteredData = filteredData.filter(item => 
+                item.status.toString().toLowerCase() === selectedStatus.toLowerCase()
+            );
+        }
+        
+        // Apply category filter
+        if (selectedCategory) {
+            filteredData = filteredData.filter(item => 
+                item.category.toString().toLowerCase() === selectedCategory.toLowerCase()
+            );
+        }
+        
+        // Apply criticality filter
+        if (selectedCriticality) {
+            filteredData = filteredData.filter(item => 
+                item.criticality.toString().toLowerCase() === selectedCriticality.toLowerCase()
+            );
+        }
+        
+        console.log("Final filtered data:", filteredData); // Debug log
+        setFilteredTableData(filteredData);
+    };
+
+    // Modify the pie chart click handler
+    const handlePieChartClick = (e, elements) => {
+        if (elements && elements.length > 0) {
+            const index = elements[0].index;
+            const status = pieChartInstance.current.data.labels[index];
+            
+            console.log('=== Pie Chart Click Debug ===');
+            console.log('Clicked Status:', status);
+            
+            // Toggle status selection
+            const newStatus = status === selectedStatus ? null : status;
+            setSelectedStatus(newStatus);
+            
+            console.log('New Selected Status:', newStatus);
+            
+            // Update all charts with the filtered data
+            if (summaryRef.current) {
+                // Apply the filter to the pie chart
+                createOrUpdatePieChart(summaryRef.current, newStatus);
+                
+                // Apply the filter to the category chart
+                createOrUpdateCategoryChart(summaryRef.current, newStatus);
+                
+                // Apply the filter to the criticality chart
+                createOrUpdateCriticalityChart(summaryRef.current, newStatus);
+                
+                // Filter the table data
+                if (summaryRef.current.detailed_data) {
+                    let filteredData = summaryRef.current.detailed_data;
+                    
+                    if (newStatus) {
+                        filteredData = filteredData.filter(item => {
+                            return (item.status || item.calculated_status || '').toLowerCase() === newStatus.toLowerCase();
+                        });
+                    }
+                    
+                    setFilteredTableData(filteredData);
+                }
+            }
+        }
+    };
+
+    // Enhance the category chart click handler
+    const handleCategoryChartClick = (category, status) => {
+        console.log('=== Category Chart Click Handler ===');
+        console.log('Selected Category:', category);
+        console.log('Selected Status:', status);
+        
+        // Toggle filters
+        const newCategory = category === selectedCategory ? null : category;
+        const newStatus = status === selectedStatus ? null : status;
+        
+        setSelectedCategory(newCategory);
+        setSelectedStatus(newStatus);
+        
+        // Apply filters to all charts
+        if (summaryRef.current) {
+            // Update all charts with filtered data
+            createOrUpdatePieChart(summaryRef.current, newStatus);
+            createOrUpdateCategoryChart(summaryRef.current, newStatus, newCategory);
+            createOrUpdateCriticalityChart(summaryRef.current, newStatus);
+            
+            // Filter table data
+            if (summaryRef.current.detailed_data) {
+                let filteredData = [...summaryRef.current.detailed_data];
+                
+                if (newCategory) {
+                    filteredData = filteredData.filter(item => {
+                        const itemCategory = (item.category || '').toLowerCase();
+                        return itemCategory === newCategory.toLowerCase();
+                    });
+                }
+                
+                if (newStatus) {
+                    filteredData = filteredData.filter(item => {
+                        const itemStatus = (item.status || item.calculated_status || '').toLowerCase();
+                        return itemStatus === newStatus.toLowerCase();
+                    });
+                }
+                
+                setFilteredTableData(filteredData);
+            }
+        }
+    };
+
+    // Enhance the criticality chart click handler
+    const handleCriticalityChartClick = (criticality, status) => {
+        console.log('=== Criticality Chart Click Handler ===');
+        console.log('Selected Criticality:', criticality);
+        console.log('Selected Status:', status);
+        
+        // Toggle filters
+        const newCriticality = criticality === selectedCriticality ? null : criticality;
+        const newStatus = status === selectedStatus ? null : status;
+        
+        setSelectedCriticality(newCriticality);
+        setSelectedStatus(newStatus);
+        
+        // Apply filters to all charts
+        if (summaryRef.current) {
+            // Update all charts with filtered data
+            createOrUpdatePieChart(summaryRef.current, newStatus);
+            createOrUpdateCategoryChart(summaryRef.current, newStatus);
+            createOrUpdateCriticalityChart(summaryRef.current, newStatus, newCriticality);
+            
+            // Filter table data
+            if (summaryRef.current.detailed_data) {
+                let filteredData = [...summaryRef.current.detailed_data];
+                
+                if (newCriticality) {
+                    filteredData = filteredData.filter(item => {
+                        const itemCriticality = (item.criticality || '').toLowerCase();
+                        return itemCriticality === newCriticality.toLowerCase();
+                    });
+                }
+                
+                if (newStatus) {
+                    filteredData = filteredData.filter(item => {
+                        const itemStatus = (item.status || item.calculated_status || '').toLowerCase();
+                        return itemStatus === newStatus.toLowerCase();
+                    });
+                }
+                
+                setFilteredTableData(filteredData);
+            }
+        }
+    };
+
+    // Update the pie chart options to include click handler
+    const createOrUpdatePieChart = (data, activeStatus) => {
+        if (!pieChartRef.current) return;
+        
+        // If there's an existing chart, destroy it
+        if (pieChartInstance.current) {
+            pieChartInstance.current.destroy();
+        }
+        
+        // Prepare data for the pie chart
+        const labels = [
+            'Completed', 
+            'Completed with Delay', 
+            'Due', 
+            'Due with Delay', 
+            'Ongoing', 
+            'Ongoing with Delay'
+        ];
+        
+        // Colors for each status
+        const statusColors = {
+            'Completed': '#007bff',
+            'Completed with Delay': '#28a745',
+            'Due': '#dc3545',
+            'Due with Delay': '#fd7e14',
+            'Ongoing': '#17a2b8',
+            'Ongoing with Delay': '#ffc107'
+        };
+        
+        // Get the data values
+        const values = [
+            data.completed || 0,
+            data.completed_with_delay || 0,
+            data.due || 0,
+            data.due_with_delay || 0,
+            data.ongoing || 0,
+            data.ongoing_with_delay || 0
+        ];
+        
+        // Create background colors array with transparency for non-active segments
+        const backgroundColors = labels.map((label) => {
+            const baseColor = statusColors[label];
+            if (activeStatus && label !== activeStatus) {
+                return baseColor + '80'; // Add 50% transparency
+            }
+            return baseColor;
+        });
+        
+        // Create the chart
+        const ctx = pieChartRef.current.getContext('2d');
+        pieChartInstance.current = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: backgroundColors,
+                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            font: {
+                                size: 11
+                            },
+                            // Highlight active status in legend
+                            filter: (legendItem, data) => {
+                                if (activeStatus) {
+                                    legendItem.fontColor = legendItem.text === activeStatus ? '#000000' : '#999999';
+                                }
+                                return true;
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: selectedEntity ? 
+                            `Task Status Distribution for ${selectedEntity.name}` : 
+                            'Task Status Distribution',
+                        font: {
+                            size: 16
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = values.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                onClick: handlePieChartClick
+            }
+        });
+    };
+
+    // Separate function for Category Bar Chart
+    const createOrUpdateCategoryChart = (data, activeStatus, activeCategory) => {
+        if (!barChartRef.current) return;
+        
+        if (barChartInstance.current) {
+            barChartInstance.current.destroy();
+        }
+        
+        console.log('=== Creating Category Chart ===');
+        console.log('Input Data:', data);
+        
+        // Process category data for the bar chart
+        const categoryData = data.category_data || {};
+        const categories = Object.keys(categoryData);
+        
+        console.log('Categories:', categories);
+        console.log('Category Data:', categoryData);
+        
+        // Status types for category chart
+        const statuses = [
+            'Completed', 
+            'Completed with Delay', 
+            'Ongoing', 
+            'Ongoing with Delay', 
+            'Due', 
+            'Due with Delay'
+        ];
+        
+        // Colors for each status
+        const statusColors = {
+            'Completed': '#007bff',
+            'Completed with Delay': '#28a745',
+            'Due': '#dc3545',
+            'Due with Delay': '#fd7e14',
+            'Ongoing': '#17a2b8',
+            'Ongoing with Delay': '#ffc107'
+        };
+        
+        // Create datasets for category chart with active filtering
+        let datasets = statuses.map(status => {
+            const counts = categories.map(category => {
+                const count = categoryData[category]?.[status] || 0;
+                return count;
+            });
+            
+            // Apply transparency for non-active status
+            let backgroundColor = statusColors[status];
+            if (activeStatus && status !== activeStatus) {
+                backgroundColor = backgroundColor + '80';  // 50% transparency
+            }
+            
+            return {
+                label: status,
+                data: counts,
+                backgroundColor: backgroundColor,
+                borderColor: 'rgba(255, 255, 255, 0.8)',
+                borderWidth: 1
+            };
+        });
+        
+        console.log('Category Chart Datasets:', datasets);
+        
+        // Create the category chart
+        const ctx = barChartRef.current.getContext('2d');
+        barChartInstance.current = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: categories,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Category'
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Tasks'
+                        },
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            font: { size: 10 },
+                            // Highlight active status in legend
+                            filter: (legendItem, data) => {
+                                if (activeStatus) {
+                                    legendItem.fontColor = legendItem.text === activeStatus ? '#000000' : '#999999';
+                                }
+                                return true;
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Tasks by Category',
+                        font: { size: 16 }
+                    }
+                },
+                onClick: (e, elements) => {
+                    if (!elements || elements.length === 0) return;
+                    
+                    const index = elements[0].index;
+                    const datasetIndex = elements[0].datasetIndex;
+                    const category = categories[index];
+                    const status = statuses[datasetIndex];
+                    
+                    handleCategoryChartClick(category, status);
+                }
+            }
+        });
+    };
+
+    // Separate function for Criticality Bar Chart
+    const createOrUpdateCriticalityChart = (data, activeStatus, activeCriticality) => {
+        if (!criticalityChartRef.current) return;
+        
+        if (criticalityChartInstance.current) {
+            criticalityChartInstance.current.destroy();
+        }
+        
+        console.log('=== Creating Criticality Chart ===');
+        console.log('Input Data:', data);
+        
+        const criticalityData = data.criticality_data || {};
+        const criticalities = Object.keys(criticalityData);
+        
+        console.log('Criticalities:', criticalities);
+        console.log('Criticality Data:', criticalityData);
+        
+        // Status types for criticality chart
+        const statuses = [
+            'Completed', 
+            'Completed with Delay', 
+            'Ongoing', 
+            'Ongoing with Delay', 
+            'Due', 
+            'Due with Delay'
+        ];
+        
+        const statusColors = {
+            'Completed': '#007bff',
+            'Completed with Delay': '#28a745',
+            'Ongoing': '#17a2b8',
+            'Ongoing with Delay': '#ffc107',
+            'Due': '#dc3545',
+            'Due with Delay': '#fd7e14'
+        };
+        
+        // Create datasets for criticality chart with active filtering
+        let datasets = statuses.map(status => {
+            const counts = criticalities.map(criticality => {
+                const count = criticalityData[criticality]?.[status] || 0;
+                return count;
+            });
+            
+            // Apply transparency for non-active status
+            let backgroundColor = statusColors[status];
+            if (activeStatus && status !== activeStatus) {
+                backgroundColor = backgroundColor + '80';  // 50% transparency
+            }
+            
+            return {
+                label: status,
+                data: counts,
+                backgroundColor: backgroundColor,
+                borderColor: 'rgba(255, 255, 255, 0.8)',
+                borderWidth: 1
+            };
+        });
+        
+        console.log('Criticality Chart Datasets:', datasets);
+        
+        // Create the criticality chart
+        const ctx = criticalityChartRef.current.getContext('2d');
+        criticalityChartInstance.current = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: criticalities,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Criticality'
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Tasks'
+                        },
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            font: { size: 10 },
+                            // Highlight active status in legend
+                            filter: (legendItem, data) => {
+                                if (activeStatus) {
+                                    legendItem.fontColor = legendItem.text === activeStatus ? '#000000' : '#999999';
+                                }
+                                return true;
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Tasks by Criticality',
+                        font: { size: 16 }
+                    }
+                },
+                onClick: (e, elements) => {
+                    if (!elements || elements.length === 0) return;
+                    
+                    const index = elements[0].index;
+                    const datasetIndex = elements[0].datasetIndex;
+                    const criticality = criticalities[index];
+                    const status = statuses[datasetIndex];
+                    
+                    handleCriticalityChartClick(criticality, status);
+                }
+            }
+        });
+    };
+
+    const getActiveFilterMessage = () => {
+        const filters = [];
+        
+        // Add segment filter if active
+        if (window.segmentFiltered) {
+            if (window.segmentFiltered.status) filters.push(`Status: ${window.segmentFiltered.status}`);
+            if (window.segmentFiltered.category) filters.push(`Category: ${window.segmentFiltered.category}`);
+            if (window.segmentFiltered.criticality) filters.push(`Criticality: ${window.segmentFiltered.criticality}`);
+            filters.push("(Segment View)");
+        } else {
+            // Add regular filters (Global Admin specific)
+            if (selectedTimePeriod && selectedTimePeriod !== 'All') filters.push(`Time: ${selectedTimePeriod}`);
+            if (selectedInternalExternalValue && selectedInternalExternalValue !== 'All') filters.push(`Type: ${selectedInternalExternalValue}`);
+            if (selectedMandatoryOptionalValue && selectedMandatoryOptionalValue !== 'All') filters.push(`Requirement: ${selectedMandatoryOptionalValue}`);
+            if (selectedStatus) filters.push(`Status: ${selectedStatus}`);
+            if (selectedCategory) filters.push(`Category: ${selectedCategory}`);
+            if (selectedCriticality) filters.push(`Criticality: ${selectedCriticality}`);
+            if (selectedEntity) filters.push(`Entity: ${selectedEntity.name}`); // Global Admin can filter by entity
+        }
+        
+        if (filters.length === 0) return;
+        return filters.join(", ");
+    };
+
+    // Add a new function to handle refresh
+    const handleRefresh = () => {
+        console.log("Resetting all filters");
+        // Reset all filters
+        setSelectedStatus(null);
+        setSelectedCategory(null);
+        setSelectedCriticality(null);
+        setSelectedEntity(null);
+        setSelectedTimePeriod('All');
+        setSelectedInternalExternalValue('All');
+        setSelectedMandatoryOptionalValue('All');
+        setEntitySearchTerm('');
+        setIsEntityDropdownOpen(false);
+
+        // Fetch fresh data
+        fetchData();
+        fetchEntities();
+        
+        // Reset all charts
+        if (summaryRef.current) {
+            createOrUpdatePieChart(summaryRef.current);
+            createOrUpdateCategoryChart(summaryRef.current);
+            createOrUpdateCriticalityChart(summaryRef.current);
+        }
+    };
+
+    // Time Period filter handler
+    const handleTimePeriodClick = (period) => {
+        console.log(`Setting time period filter to: ${period}`);
+        setSelectedTimePeriod(period);
+        // We don't call fetchData() here because the useEffect will handle it
+    };
+
+    // Internal/External filter handler
+    const handleInternalExternalClick = (value) => {
+        console.log(`Setting internal/external filter to: ${value}`);
+        setSelectedInternalExternalValue(value);
+        // We don't call fetchData() here because the useEffect will handle it
+    };
+
+    // Mandatory/Optional filter handler
+    const handleMandatoryOptionalClick = (value) => {
+        console.log(`Setting mandatory/optional filter to: ${value}`);
+        setSelectedMandatoryOptionalValue(value);
+        // We don't call fetchData() here because the useEffect will handle it
+    };
+
+    if (!summary) return React.createElement("p", null, "Loading dashboard data...");
+
+    return (
+        React.createElement("div", null, 
+            // Filter row at the top
+            React.createElement("div", { className: "filters-row" },
+                // Time Period Filters
+                React.createElement("div", { className: "filter-group" },
+                    React.createElement("button", { 
+                        onClick: () => handleTimePeriodClick('All'),
+                        className: `filter-button ${selectedTimePeriod === 'All' ? 'active' : ''}`,
+                    }, "All"),
+                    React.createElement("button", { 
+                        onClick: () => handleTimePeriodClick('Current Month'),
+                        className: `filter-button ${selectedTimePeriod === 'Current Month' ? 'active' : ''}`,
+                    }, "Current Month"),
+                    React.createElement("button", { 
+                        onClick: () => handleTimePeriodClick('Previous Month'),
+                        className: `filter-button ${selectedTimePeriod === 'Previous Month' ? 'active' : ''}`,
+                    }, "Previous Month"),
+                    React.createElement("button", { 
+                        onClick: () => handleTimePeriodClick('Next Month'),
+                        className: `filter-button ${selectedTimePeriod === 'Next Month' ? 'active' : ''}`,
+                    }, "Next Month"),
+                    React.createElement("button", { 
+                        onClick: () => handleTimePeriodClick('Previous 3 Months'),
+                        className: `filter-button ${selectedTimePeriod === 'Previous 3 Months' ? 'active' : ''}`,
+                    }, "Previous 3 Months")
+                ),
+                
+                // Vertical divider
+                React.createElement("div", { className: "filter-divider" }),
+                
+                // Internal/External Filters
+                React.createElement("div", { className: "filter-group" },
+                    React.createElement("button", { 
+                        onClick: () => handleInternalExternalClick('All'),
+                        className: `filter-button ${selectedInternalExternalValue === 'All' ? 'active' : ''}`,
+                    }, "All"),
+                    React.createElement("button", { 
+                        onClick: () => handleInternalExternalClick('Internal'),
+                        className: `filter-button ${selectedInternalExternalValue === 'Internal' ? 'active' : ''}`,
+                    }, "Internal"),
+                    React.createElement("button", { 
+                        onClick: () => handleInternalExternalClick('External'),
+                        className: `filter-button ${selectedInternalExternalValue === 'External' ? 'active' : ''}`,
+                    }, "External")
+                ),
+                
+                // Vertical divider
+                React.createElement("div", { className: "filter-divider" }),
+                
+                // Mandatory/Optional Filters
+                React.createElement("div", { className: "filter-group" },
+                    React.createElement("button", { 
+                        onClick: () => handleMandatoryOptionalClick('All'),
+                        className: `filter-button ${selectedMandatoryOptionalValue === 'All' ? 'active' : ''}`,
+                    }, "All"),
+                    React.createElement("button", { 
+                        onClick: () => handleMandatoryOptionalClick('Mandatory'),
+                        className: `filter-button ${selectedMandatoryOptionalValue === 'Mandatory' ? 'active' : ''}`,
+                    }, "Mandatory"),
+                    React.createElement("button", { 
+                        onClick: () => handleMandatoryOptionalClick('Optional'),
+                        className: `filter-button ${selectedMandatoryOptionalValue === 'Optional' ? 'active' : ''}`,
+                    }, "Optional")
+                ),
+                
+                // Entity dropdown filter
+                React.createElement("div", { className: "filter-divider" }),
+                
+                React.createElement("div", { className: "filter-group" },
+                    React.createElement("div", { 
+                        className: "entity-dropdown",
+                        style: { position: 'relative' }
+                    },
+                        React.createElement("button", { 
+                            onClick: () => {
+                                console.log("Toggle entity dropdown");
+                                setIsEntityDropdownOpen(!isEntityDropdownOpen);
+                            },
+                            className: `filter-button ${selectedEntity ? 'active' : ''}`,
+                            style: { minWidth: '200px', textAlign: 'left' }
+                        }, selectedEntity ? `Entity: ${selectedEntity.name}` : "Select Entity"),
+                            
+                        isEntityDropdownOpen && React.createElement("div", { 
+                            className: "dropdown-menu",
+                            style: { 
+                                display: 'block',
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                zIndex: 1000,
+                                minWidth: '200px',
+                                backgroundColor: 'white',
+                                border: '1px solid rgba(0,0,0,.15)',
+                                borderRadius: '4px',
+                                boxShadow: '0 6px 12px rgba(0,0,0,.175)',
+                                maxHeight: '300px',
+                                overflowY: 'auto'
+                            }
+                        },
+                            // Search box for entities
+                            React.createElement("div", { className: "dropdown-search" },
+                                React.createElement("input", {
+                                    type: "text",
+                                    placeholder: "Search entities...",
+                                    value: entitySearchTerm,
+                                    onChange: (e) => {
+                                        e.stopPropagation();
+                                        setEntitySearchTerm(e.target.value);
+                                    },
+                                    onClick: (e) => e.stopPropagation(),
+                                    style: { width: '100%' }
+                                })
+                            ),
+                                
+                            // All entities option
+                            React.createElement("button", {
+                                className: `dropdown-item ${!selectedEntity ? 'active' : ''}`,
+                                onClick: (e) => {
+                                    e.stopPropagation();
+                                    clearEntityFilter();
+                                }
+                            }, "All Entities"),
+                                
+                            // List of entities with error handling
+                            Array.isArray(filteredEntities) && filteredEntities.length > 0 
+                                ? filteredEntities.map(entity => (
+                                React.createElement("button", {
+                                    key: entity.id,
+                                        className: `dropdown-item ${selectedEntity && selectedEntity.id === entity.id ? 'active' : ''}`,
+                                        onClick: (e) => {
+                                            e.stopPropagation();
+                                            handleEntitySelect(entity.id, entity.name);
+                                        }
+                                }, entity.name)
+                                )) 
+                                : React.createElement("div", { 
+                                    className: "dropdown-item",
+                                    style: { color: '#666', fontStyle: 'italic' }
+                                }, entities.length === 0 ? "Loading entities..." : "No matching entities found")
+                        )
+                    )
+                )
+            ),
+
+    // Main dashboard grid
+            React.createElement("div", { className: "dashboard-grid" },
+                // Task Summary Section - Now on the left
+                React.createElement("div", { className: "card", style: { width: "250px" } },
+                    React.createElement("h3", { className: "dashboard-title" }, 
+                        selectedEntity ? `${selectedEntity.name}'s Tasks` : "Task Dashboard"
+                    ),
+                    React.createElement("div", null,
+                        TaskBox("Total Tasks", summary.total_tasks, "#6c757d", () => {
+                            // Reset all filters
+                            setSelectedStatus(null);
+                            setSelectedCategory(null);
+                            setSelectedCriticality(null);
+                            
+                            // Update all charts with no active filters
+                            if (summaryRef.current) {
+                                createOrUpdatePieChart(summaryRef.current);
+                                createOrUpdateCategoryChart(summaryRef.current);
+                                createOrUpdateCriticalityChart(summaryRef.current);
+                            }
+                            
+                            // Update table data with no filters
+                            if (summaryRef.current && summaryRef.current.detailed_data) {
+                                updateTableData(summaryRef.current.detailed_data);
+                            }
+                        }),
+
+                        TaskBox("Completed", summary.completed, "#007bff", () => {
+                            const status = "Completed";
+                            const newStatus = status === selectedStatus ? null : status;
+                            setSelectedStatus(newStatus);
+                            
+                            // Update all charts with filtered status
+                            if (summaryRef.current) {
+                                createOrUpdatePieChart(summaryRef.current, newStatus);
+                                createOrUpdateCategoryChart(summaryRef.current, newStatus);
+                                createOrUpdateCriticalityChart(summaryRef.current, newStatus);
+                            }
+                            
+                            // Update table data
+                            if (summaryRef.current && summaryRef.current.detailed_data) {
+                                let filteredData = [...summaryRef.current.detailed_data];
+                                
+                                if (newStatus) {
+                                    filteredData = filteredData.filter(item => {
+                                        const itemStatus = (item.status || item.calculated_status || '').toLowerCase();
+                                        return itemStatus === newStatus.toLowerCase();
+                                    });
+                                }
+                                
+                                setFilteredTableData(filteredData);
+                            }
+                        }),
+
+                        TaskBox("Completed with Delay", summary.completed_with_delay, "#28a745", () => {
+                            const status = "Completed with Delay";
+                            const newStatus = status === selectedStatus ? null : status;
+                            setSelectedStatus(newStatus);
+                            
+                            // Update all charts with filtered status
+                            if (summaryRef.current) {
+                                createOrUpdatePieChart(summaryRef.current, newStatus);
+                                createOrUpdateCategoryChart(summaryRef.current, newStatus);
+                                createOrUpdateCriticalityChart(summaryRef.current, newStatus);
+                            }
+                            
+                            // Update table data
+                            if (summaryRef.current && summaryRef.current.detailed_data) {
+                                let filteredData = [...summaryRef.current.detailed_data];
+                                
+                                if (newStatus) {
+                                    filteredData = filteredData.filter(item => {
+                                        const itemStatus = (item.status || item.calculated_status || '').toLowerCase();
+                                        return itemStatus === newStatus.toLowerCase();
+                                    });
+                                }
+                                
+                                setFilteredTableData(filteredData);
+                            }
+                        }),
+
+                        TaskBox("Ongoing", summary.ongoing, "#17a2b8", () => {
+                            const status = "Ongoing";
+                            const newStatus = status === selectedStatus ? null : status;
+                            setSelectedStatus(newStatus);
+                            
+                            // Update all charts with filtered status
+                            if (summaryRef.current) {
+                                createOrUpdatePieChart(summaryRef.current, newStatus);
+                                createOrUpdateCategoryChart(summaryRef.current, newStatus);
+                                createOrUpdateCriticalityChart(summaryRef.current, newStatus);
+                            }
+                            
+                            // Update table data
+                            if (summaryRef.current && summaryRef.current.detailed_data) {
+                                let filteredData = [...summaryRef.current.detailed_data];
+                                
+                                if (newStatus) {
+                                    filteredData = filteredData.filter(item => {
+                                        const itemStatus = (item.status || item.calculated_status || '').toLowerCase();
+                                        return itemStatus === newStatus.toLowerCase();
+                                    });
+                                }
+                                
+                                setFilteredTableData(filteredData);
+                            }
+                        }),
+
+                        TaskBox("Ongoing with Delay", summary.ongoing_with_delay, "#ffc107", () => {
+                            const status = "Ongoing with Delay";
+                            const newStatus = status === selectedStatus ? null : status;
+                            setSelectedStatus(newStatus);
+                            
+                            // Update all charts with filtered status
+                            if (summaryRef.current) {
+                                createOrUpdatePieChart(summaryRef.current, newStatus);
+                                createOrUpdateCategoryChart(summaryRef.current, newStatus);
+                                createOrUpdateCriticalityChart(summaryRef.current, newStatus);
+                            }
+                            
+                            // Update table data
+                            if (summaryRef.current && summaryRef.current.detailed_data) {
+                                let filteredData = [...summaryRef.current.detailed_data];
+                                
+                                if (newStatus) {
+                                    filteredData = filteredData.filter(item => {
+                                        const itemStatus = (item.status || item.calculated_status || '').toLowerCase();
+                                        return itemStatus === newStatus.toLowerCase();
+                                    });
+                                }
+                                
+                                setFilteredTableData(filteredData);
+                            }
+                        }),
+
+                        TaskBox("Due", summary.due, "#dc3545", () => {
+                            const status = "Due";
+                            const newStatus = status === selectedStatus ? null : status;
+                            setSelectedStatus(newStatus);
+                            
+                            // Update all charts with filtered status
+                            if (summaryRef.current) {
+                                createOrUpdatePieChart(summaryRef.current, newStatus);
+                                createOrUpdateCategoryChart(summaryRef.current, newStatus);
+                                createOrUpdateCriticalityChart(summaryRef.current, newStatus);
+                            }
+                            
+                            // Update table data
+                            if (summaryRef.current && summaryRef.current.detailed_data) {
+                                let filteredData = [...summaryRef.current.detailed_data];
+                                
+                                if (newStatus) {
+                                    filteredData = filteredData.filter(item => {
+                                        const itemStatus = (item.status || item.calculated_status || '').toLowerCase();
+                                        return itemStatus === newStatus.toLowerCase();
+                                    });
+                                }
+                                
+                                setFilteredTableData(filteredData);
+                            }
+                        }),
+
+                        TaskBox("Due with Delay", summary.due_with_delay, "#fd7e14", () => {
+                            const status = "Due with Delay";
+                            const newStatus = status === selectedStatus ? null : status;
+                            setSelectedStatus(newStatus);
+                            
+                            // Update all charts with filtered status
+                            if (summaryRef.current) {
+                                createOrUpdatePieChart(summaryRef.current, newStatus);
+                                createOrUpdateCategoryChart(summaryRef.current, newStatus);
+                                createOrUpdateCriticalityChart(summaryRef.current, newStatus);
+                            }
+                            
+                            // Update table data
+                            if (summaryRef.current && summaryRef.current.detailed_data) {
+                                let filteredData = [...summaryRef.current.detailed_data];
+                                
+                                if (newStatus) {
+                                    filteredData = filteredData.filter(item => {
+                                        const itemStatus = (item.status || item.calculated_status || '').toLowerCase();
+                                        return itemStatus === newStatus.toLowerCase();
+                                    });
+                                }
+                                
+                                setFilteredTableData(filteredData);
+                            }
+                        }),
+                    )
+                ),
+                    
+                // Global Admin Dashboard Charts Container
+                React.createElement("div", { className: "global-admin-charts-container" },
+                    // Top row with Pie Chart and Bar Chart
+                    React.createElement("div", { className: "top-charts-row" },
+                        React.createElement("div", { className: "card" },
+                            React.createElement("div", { className: "chart-container" },
+                                React.createElement("canvas", { ref: pieChartRef })
+                            )
+                        ),
+                        React.createElement("div", { className: "card" },
+                            React.createElement("div", { className: "chart-container" },
+                                React.createElement("canvas", { ref: barChartRef })
+                            )
+                        )
+                    ),
+                    // Bottom row with Criticality Chart and Details Table
+                    React.createElement("div", { className: "bottom-charts-row" },
+                        React.createElement("div", { className: "card" },
+                            React.createElement("div", { className: "chart-container" },
+                                React.createElement("canvas", { ref: criticalityChartRef })
+                            )
+                        ),
+                        React.createElement("div", { className: "card" },
+                            React.createElement("div", { className: "table-container" },
+                                // Add refresh button section
+                                React.createElement("div", { className: "table-header-actions" },
+                                    React.createElement("h3", { style: { margin: 0 } }, "Task Details"),
+                                    React.createElement("button", {
+                                        className: "refresh-button",
+                                        onClick: handleRefresh,
+                                        title: "Reset all filters and refresh data"
+                                    },
+                                        // Refresh icon (SVG)
+                                        React.createElement("svg", {
+                                            xmlns: "http://www.w3.org/2000/svg",
+                                            fill: "none",
+                                            viewBox: "0 0 24 24",
+                                            stroke: "currentColor"
+                                        },
+                                            React.createElement("path", {
+                                                strokeLinecap: "round",
+                                                strokeLinejoin: "round",
+                                                strokeWidth: "2",
+                                                d: "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                            })
+                                        ),
+                                        "Reset Filters"
+                                    )
+                                ),
+                                React.createElement("table", { className: "details-table" },
+                                    React.createElement("thead", null,
+                                        React.createElement("tr", null,
+                                            React.createElement("th", null, "Entity"),
+                                            React.createElement("th", null, "Category"),
+                                            React.createElement("th", null, "Criticality"),
+                                            React.createElement("th", null, "Task"),
+                                            React.createElement("th", null, "Status"),
+                                            React.createElement("th", null, "Count")
+                                        )
+                                    ),
+                                    React.createElement("tbody", null,
+                                        filteredTableData.length > 0 ? 
+                                            filteredTableData.map((item, index) => (
+                                                React.createElement("tr", { key: index },
+                                                    React.createElement("td", null, item.entity_name || 'N/A'),
+                                                    React.createElement("td", null, item.category || 'N/A'),
+                                                    React.createElement("td", {
+                                                        className: item.criticality ? `criticality-${item.criticality.toLowerCase()}` : ''
+                                                    }, item.criticality || 'N/A'),
+                                                    React.createElement("td", null, item.task_name || 'N/A'),
+                                                    React.createElement("td", null, item.status || 'N/A'),
+                                                    React.createElement("td", null, item.count || 0)
+                                                )
+                                            )) :
+                                            React.createElement("tr", null,
+                                                React.createElement("td", { colSpan: 6, style: { textAlign: "center" } }, 
+                                                    "No tasks found for the selected filters"
+                                                )
+                                            )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            ),
+            React.createElement("div", {
+                className: "active-filters",
+                style: {
+                    padding: "8px 16px",
+                    margin: "8px 0",
+                    backgroundColor: "rgba(0, 123, 255, 0.1)",
+                    borderRadius: "4px",
+                    display: selectedStatus || selectedCategory || selectedCriticality ? "block" : "none"
+                }
+            },
+                React.createElement("strong", null, "Active filters: "),
+                getActiveFilterMessage()
+            )
+        )
+    );
+}
+            
+function TaskBox(label, count, color, onClick = null) {
+    return React.createElement("div", {
+        className: "task-box",
+        style: { backgroundColor: color, cursor: onClick ? "pointer" : "default" },
+        onClick: onClick
+    }, 
+    React.createElement("div", { className: "task-label" }, label), 
+    React.createElement("span", { className: "task-count" }, count));
+}
+
+function App() {
+    return React.createElement(TaskDashboard, { adminType: "Global" }); // Set as Global Admin
+}
+
+ReactDOM.render(React.createElement(App), document.getElementById("dashboard-container"));
+    </script>
+</body>
+</html>

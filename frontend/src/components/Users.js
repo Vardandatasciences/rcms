@@ -34,6 +34,10 @@ const Users = () => {
     role: ""
   });
   const navigate = useNavigate();
+<<<<<<< HEAD
+=======
+ 
+>>>>>>> 6cb8075a6042d95cdfe2b6a1cfbdecdac54e84cf
   useEffect(() => {
     // Check if user is logged in
     const userData = sessionStorage.getItem("user");
@@ -41,18 +45,18 @@ const Users = () => {
       navigate("/login");
       return;
     }
-
+ 
     try {
       // Parse user data
       const parsedUserData = JSON.parse(userData);
-      
+     
       // Get user role and entity ID
       const role = parsedUserData.role || "";
       setUserRole(role);
-      
+     
       // Get entity_id - check all possible locations in the user data structure
       let entityId = null;
-      
+     
       if (parsedUserData.entity_id) {
         entityId = parsedUserData.entity_id;
       } else if (parsedUserData.entityId) {
@@ -64,9 +68,9 @@ const Users = () => {
       } else if (parsedUserData.entityID) {
         entityId = parsedUserData.entityID;
       }
-      
+     
       setUserEntityId(entityId);
-      
+     
       // Fetch data based on user role and entity ID
       Promise.all([fetchUsers(role, entityId), fetchEntities()]).catch(err => {
         console.error("Error in initial data loading:", err);
@@ -78,25 +82,25 @@ const Users = () => {
       setLoading(false);
     }
   }, [navigate]);
-
+ 
   const fetchUsers = async (role, entityId) => {
     try {
       setLoading(true);
       let response;
-
+ 
       console.log("Fetching users for role: " + role + " and entityId: " + entityId);
-      
+     
       // For Admin users, fetch only users for their entity
       if (role === "Global") {
         console.log("Fetching all users for Global user");
         response = await axios.get("http://localhost:5000/users");
       } else {
         // For Global users, fetch all users
-        
+       
         console.log(`Fetching users for entity: ${entityId}`);
         response = await axios.get(`http://localhost:5000/entity_users_admin/${entityId}`);
       }
-      
+     
       setUsers(response.data.users || []);
       return response.data.users;
     } catch (err) {
@@ -118,6 +122,10 @@ const Users = () => {
       throw err;
     }
   };
+<<<<<<< HEAD
+=======
+ 
+>>>>>>> 6cb8075a6042d95cdfe2b6a1cfbdecdac54e84cf
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (showEditForm) {
@@ -126,6 +134,10 @@ const Users = () => {
       setNewUser({ ...newUser, [name]: value });
     }
   };
+<<<<<<< HEAD
+=======
+ 
+>>>>>>> 6cb8075a6042d95cdfe2b6a1cfbdecdac54e84cf
   const handleAddUser = async (e) => {
     e.preventDefault();
     setErrorMessage("");
@@ -222,7 +234,7 @@ const Users = () => {
       password: "",
       role: ""
     });
-    
+   
     // If user is Admin, pre-select their entity in the add form
     if (userRole === "Admin" && userEntityId && !showAddForm) {
       setNewUser(prev => ({
@@ -238,17 +250,17 @@ const Users = () => {
     setErrorMessage("");
     setSuccessMessage("");
   };
+ 
   return (
     <div className="users-container">
       <Navbar />
       <div className="users-content">
-        <h1>Users Management</h1>
+        {/* <h1>Users Management</h1>
         <p>
-          {userRole === "Admin" 
-            ? "View and manage users for your entity" 
+          {userRole === "Admin"
+            ? "View and manage users for your entity"
             : "View and manage all system users"}
-        </p>
-
+        </p> */}
         <div className="users-actions">
           <button className="btn-add-user" onClick={toggleAddForm}>
             {showAddForm ? (
@@ -521,8 +533,8 @@ const Users = () => {
             ) : users.length === 0 ? (
               <div className="no-users">
                 <p>
-                  {userRole === "Admin" 
-                    ? "No users found for your entity. Add a new user to get started." 
+                  {userRole === "Admin"
+                    ? "No users found for your entity. Add a new user to get started."
                     : "No users found. Add a new user to get started."}
                 </p>
               </div>
@@ -589,4 +601,5 @@ const Users = () => {
     </div>
   );
 };
+ 
 export default Users;

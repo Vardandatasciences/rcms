@@ -75,6 +75,12 @@ const Navbar = () => {
     }
   };
 
+  const handleAnalysisClick = (e) => {
+    e.preventDefault();
+    // Open the analysis.html file in a new tab/window
+    window.open('/global_admin.html', '_blank');
+  };
+
   return (
     <nav className="navbar">
       <div className="navbar-container">
@@ -135,18 +141,7 @@ const Navbar = () => {
               </li>
             )}
 
-            {/* Activities - Visible to Global and Admin */}
-            {(user.role === 'Global' || user.role === 'Admin') && (
-              <li className="nav-item">
-                <Link to="/activities" className={`nav-link ${isActive('/activities') ? 'active' : ''}`}>
-                  <FaClipboardList className="nav-icon" />
-                  <span className="nav-text">Activities</span>
-                  {isActive('/activities') && <div className="nav-indicator"></div>}
-                </Link>
-              </li>
-            )}
-
-            {/* Tasks - Visible to all roles */}
+            {/* Activities - Visible to all roles */}
             <li className="nav-item">
               <a 
                 className="nav-link" 
@@ -161,11 +156,15 @@ const Navbar = () => {
 
             {/* Analysis - Visible to all roles */}
             <li className="nav-item">
-              <Link to="/analysis" className={`nav-link ${isActive('/analysis') ? 'active' : ''}`}>
+              <a 
+                href="#" 
+                className={`nav-link ${isActive('/analysis') ? 'active' : ''}`}
+                onClick={handleAnalysisClick}
+              >
                 <FaChartLine className="nav-icon" />
                 <span className="nav-text">Analysis</span>
                 {isActive('/analysis') && <div className="nav-indicator"></div>}
-              </Link>
+              </a>
             </li>
 
             {/* Holidays - Only visible to Admin role */}

@@ -6,7 +6,7 @@ import "./Entities.css"; // Import CSS for styling
 import AddEntity from "./AddEntity"; // Import AddEntity component
 import EditEntity from "./EditEntity"; // Import EditEntity component
 import DeleteEntity from "./DeleteEntity"; // Import DeleteEntity component
-import { FaSearch, FaFilter } from "react-icons/fa"; // Import icons
+import { FaSearch, FaFilter, FaEdit, FaTrashAlt, FaPencilAlt, FaTrash, FaUser, FaPhone, FaUserFriends, FaGlobe, FaMapMarkerAlt } from "react-icons/fa"; // Import icons
 
 const Entities = () => {
   const [entities, setEntities] = useState([]);
@@ -349,14 +349,14 @@ const Entities = () => {
     <div className="entities-container">
       <Navbar />
       <div className="entities-content">
-        <h1>Entities Management</h1>
-        <p>View and manage organization entities</p>
+        {/* <h1>Entities Management</h1>
+        <p>View and manage organization entities</p> */}
 
-        <div className="entities-actions">
+        {/* <div className="entities-actions">
           <button className="btn-add-entity" onClick={toggleAddForm}>
             {showAddForm ? "Cancel" : "Add New Entity"}
           </button>
-        </div>
+        </div> */}
 
         {successMessage && (
           <div className="success-message">{successMessage}</div>
@@ -771,26 +771,32 @@ const Entities = () => {
 
         {!showAddForm && !showEditForm && (
           <>
-            {/* Search and Filter Section */}
-            <div className="search-filter-container">
-              <div className="search-box">
-                <FaSearch className="search-icon" />
-                <input
-                  type="text"
-                  placeholder="Search entities..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="search-input"
-                />
+            {/* Top Controls Section with all buttons in one row */}
+            <div className="top-controls-container">
+              <div className="search-filter-container">
+                <div className="search-box">
+                  <FaSearch className="search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search entities..."
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    className="search-input"
+                  />
+                </div>
+                
+                <button 
+                  className="filter-toggle-btn"
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  <FaFilter /> {showFilters ? 'Hide Filters' : 'Show Filters'}
+                </button>
               </div>
               
-              <button 
-                className="filter-toggle-btn"
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <FaFilter /> {showFilters ? 'Hide Filters' : 'Show Filters'}
-        </button>
-      </div>
+              <button className="btn-add-entity" onClick={toggleAddForm}>
+                Add New Entity
+              </button>
+            </div>
 
             {showFilters && (
               <div className="filters-container">
@@ -861,28 +867,33 @@ const Entities = () => {
                       <div className="entity-name-location">
                         <h3>{entity.entity_name}</h3>
                         <div className="entity-location">
-                          <i className="fas fa-map-marker-alt"></i>
+                          <FaMapMarkerAlt />
                           {entity.location}
                         </div>
+                        {/* {entity.state && (
+                          <div className="entity-badge">
+                            {entity.state.substring(0, 3).toLowerCase()}
+                          </div>
+                        )} */}
                       </div>
                     </div>
                     
                     <div className="entity-card-body">
                       <div className="entity-info">
                         <p>
-                          <i className="fas fa-user"></i>
+                          <FaUser />
                           <span><span className="info-label">Contact:</span> {entity.contact_name}</span>
                         </p>
                         <p>
-                          <i className="fas fa-phone"></i>
+                          <FaPhone />
                           <span><span className="info-label">Phone:</span> {entity.contact_phno}</span>
                         </p>
                         <p>
-                          <i className="fas fa-user-friends"></i>
+                          <FaUserFriends />
                           <span><span className="info-label">Alt Contact:</span> {entity.alternate_contact_name}</span>
                         </p>
                         <p>
-                          <i className="fas fa-globe"></i>
+                          <FaGlobe />
                           <span><span className="info-label">Country:</span> {entity.country}</span>
                         </p>
                       </div>
@@ -894,14 +905,14 @@ const Entities = () => {
                         onClick={() => handleEditEntity(entity)}
                         title="Edit Entity"
                       >
-                        <i className="fas fa-edit"></i>
+                        <FaPencilAlt />
                       </button>
                       <button
                         className="btn-delete"
                         onClick={() => handleDeleteEntity(entity.entity_id)}
                         title="Delete Entity"
                       >
-                        <i className="fas fa-trash-alt"></i>
+                        <FaTrash />
                       </button>
                     </div>
                   </div>
@@ -909,7 +920,7 @@ const Entities = () => {
               </div>
             )}
           </>
-      )}
+        )}
       </div>
     </div>
   );

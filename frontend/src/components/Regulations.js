@@ -227,12 +227,12 @@ const Regulations = () => {
     <div className="regulations-container">
       <Navbar />
       <div className="regulations-content">
-        <h1>Regulations Management</h1>
-        <p>{userRole === "Admin" ?
-          (showManageRegulations ? "Select regulations to add to your entity" : "View and manage regulations for your entity") :
+        {/* <h1>Regulations Management</h1>
+        <p>{userRole === "Admin" ? 
+          (showManageRegulations ? "Select regulations to add to your entity" : "View and manage regulations for your entity") : 
           "View all regulations in the system"}
-        </p>
- 
+        </p> */}
+
         {successMessage && (
           <div className="success-message">{successMessage}</div>
         )}
@@ -510,3 +510,4 @@ const Regulations = () => {
 };
  
 export default Regulations;
+ 
