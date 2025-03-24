@@ -5,12 +5,12 @@ import Navbar from "./Navbar";
 import "./Users.css"; // Import CSS for styling
 // Add FontAwesome for icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faUserPlus, faEdit, faTrash, faEnvelope, faIdCard, 
+import {
+  faUserPlus, faEdit, faTrash, faEnvelope, faIdCard,
   faBuilding, faUserTag, faUserEdit, faSave, faTimes,
-  faSpinner 
+  faSpinner
 } from '@fortawesome/free-solid-svg-icons';
-
+ 
 const Users = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +34,7 @@ const Users = () => {
     role: ""
   });
   const navigate = useNavigate();
-
+ 
   useEffect(() => {
     // Check if user is logged in
     const userData = sessionStorage.getItem("user");
@@ -42,18 +42,18 @@ const Users = () => {
       navigate("/login");
       return;
     }
-
+ 
     try {
       // Parse user data
       const parsedUserData = JSON.parse(userData);
-      
+     
       // Get user role and entity ID
       const role = parsedUserData.role || "";
       setUserRole(role);
-      
+     
       // Get entity_id - check all possible locations in the user data structure
       let entityId = null;
-      
+     
       if (parsedUserData.entity_id) {
         entityId = parsedUserData.entity_id;
       } else if (parsedUserData.entityId) {
@@ -65,9 +65,9 @@ const Users = () => {
       } else if (parsedUserData.entityID) {
         entityId = parsedUserData.entityID;
       }
-      
+     
       setUserEntityId(entityId);
-      
+     
       // Fetch data based on user role and entity ID
       Promise.all([fetchUsers(role, entityId), fetchEntities()]).catch(err => {
         console.error("Error in initial data loading:", err);
@@ -79,25 +79,25 @@ const Users = () => {
       setLoading(false);
     }
   }, [navigate]);
-
+ 
   const fetchUsers = async (role, entityId) => {
     try {
       setLoading(true);
       let response;
-
+ 
       console.log("Fetching users for role: " + role + " and entityId: " + entityId);
-      
+     
       // For Admin users, fetch only users for their entity
       if (role === "Global") {
         console.log("Fetching all users for Global user");
         response = await axios.get("http://localhost:5000/users");
       } else {
         // For Global users, fetch all users
-        
+       
         console.log(`Fetching users for entity: ${entityId}`);
         response = await axios.get(`http://localhost:5000/entity_users_admin/${entityId}`);
       }
-      
+     
       setUsers(response.data.users || []);
       return response.data.users;
     } catch (err) {
@@ -106,7 +106,7 @@ const Users = () => {
       throw err;
     }
   };
-
+ 
   const fetchEntities = async () => {
     try {
       const response = await axios.get("http://localhost:5000/entities");
@@ -119,7 +119,7 @@ const Users = () => {
       throw err;
     }
   };
-
+ 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (showEditForm) {
@@ -128,16 +128,16 @@ const Users = () => {
       setNewUser({ ...newUser, [name]: value });
     }
   };
-
+ 
   const handleAddUser = async (e) => {
     e.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
-
+ 
     try {
       const response = await axios.post("http://localhost:5000/add_user", newUser);
       setSuccessMessage(response.data.message);
-      
+     
       // Reset form and refresh users list
       setNewUser({
         user_id: "",
@@ -149,7 +149,7 @@ const Users = () => {
         password: "",
         role: ""
       });
-      
+     
       // Close the form after a short delay
       setTimeout(() => {
         setShowAddForm(false);
@@ -166,22 +166,22 @@ const Users = () => {
       }
     }
   };
-
+ 
   const handleEditUser = (user) => {
     setCurrentUser(user);
     setShowEditForm(true);
     setShowAddForm(false);
   };
-
+ 
   const handleUpdateUser = async (e) => {
     e.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
-
+ 
     try {
       const response = await axios.put(`http://localhost:5000/update_user/${currentUser.user_id}`, currentUser);
       setSuccessMessage(response.data.message);
-      
+     
       // Close the form after a short delay
       setTimeout(() => {
         setShowEditForm(false);
@@ -195,7 +195,7 @@ const Users = () => {
       console.error("Error updating user:", error);
     }
   };
-
+ 
   const handleDeleteUser = async (userId) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
       try {
@@ -208,7 +208,7 @@ const Users = () => {
       }
     }
   };
-
+ 
   const toggleAddForm = () => {
     setShowAddForm(!showAddForm);
     setShowEditForm(false);
@@ -225,7 +225,7 @@ const Users = () => {
       password: "",
       role: ""
     });
-    
+   
     // If user is Admin, pre-select their entity in the add form
     if (userRole === "Admin" && userEntityId && !showAddForm) {
       setNewUser(prev => ({
@@ -234,25 +234,25 @@ const Users = () => {
       }));
     }
   };
-
+ 
   const cancelEdit = () => {
     setShowEditForm(false);
     setCurrentUser(null);
     setErrorMessage("");
     setSuccessMessage("");
   };
-
+ 
   return (
     <div className="users-container">
       <Navbar />
       <div className="users-content">
-        <h1>Users Management</h1>
+        {/* <h1>Users Management</h1>
         <p>
-          {userRole === "Admin" 
-            ? "View and manage users for your entity" 
+          {userRole === "Admin"
+            ? "View and manage users for your entity"
             : "View and manage all system users"}
-        </p>
-
+        </p> */}
+ 
         <div className="users-actions">
           <button className="btn-add-user" onClick={toggleAddForm}>
             {showAddForm ? (
@@ -262,15 +262,15 @@ const Users = () => {
             )}
           </button>
         </div>
-
+ 
         {successMessage && (
           <div className="success-message">{successMessage}</div>
         )}
-
+ 
         {errorMessage && (
           <div className="error-message">{errorMessage}</div>
         )}
-
+ 
         {showAddForm && (
           <div className="user-form-container">
             <h2><FontAwesomeIcon icon={faUserPlus} /> Add New User</h2>
@@ -287,7 +287,7 @@ const Users = () => {
                     required
                   />
                 </div>
-
+ 
                 <div className="form-group">
                   <label htmlFor="entity_id">Entity*</label>
                   <select
@@ -311,7 +311,7 @@ const Users = () => {
                     </small>
                   )}
                 </div>
-
+ 
                 <div className="form-group">
                   <label htmlFor="user_name">User Name*</label>
                   <input
@@ -323,7 +323,7 @@ const Users = () => {
                     required
                   />
                 </div>
-
+ 
                 <div className="form-group">
                   <label htmlFor="address">Address</label>
                   <input
@@ -334,7 +334,7 @@ const Users = () => {
                     onChange={handleInputChange}
                   />
                 </div>
-
+ 
                 <div className="form-group">
                   <label htmlFor="mobile_no">Mobile No*</label>
                   <input
@@ -346,7 +346,7 @@ const Users = () => {
                     required
                   />
                 </div>
-
+ 
                 <div className="form-group">
                   <label htmlFor="email_id">Email ID*</label>
                   <input
@@ -358,7 +358,7 @@ const Users = () => {
                     required
                   />
                 </div>
-
+ 
                 <div className="form-group">
                   <label htmlFor="password">Password*</label>
                   <input
@@ -370,7 +370,7 @@ const Users = () => {
                     required
                   />
                 </div>
-
+ 
                 <div className="form-group">
                   <label htmlFor="role">Role*</label>
                   <select
@@ -386,7 +386,7 @@ const Users = () => {
                   </select>
                 </div>
               </div>
-
+ 
               <div className="form-actions">
                 <button type="submit" className="btn-submit">
                   <FontAwesomeIcon icon={faSave} /> Save User
@@ -398,7 +398,7 @@ const Users = () => {
             </form>
           </div>
         )}
-
+ 
         {showEditForm && currentUser && (
           <div className="user-form-container">
             <h2><FontAwesomeIcon icon={faUserEdit} /> Edit User</h2>
@@ -414,7 +414,7 @@ const Users = () => {
                     readOnly
                   />
                 </div>
-
+ 
                 <div className="form-group">
                   <label htmlFor="edit_entity_id">Entity*</label>
                   <select
@@ -437,7 +437,7 @@ const Users = () => {
                     </small>
                   )}
                 </div>
-
+ 
                 <div className="form-group">
                   <label htmlFor="edit_user_name">User Name*</label>
                   <input
@@ -449,7 +449,7 @@ const Users = () => {
                     required
                   />
                 </div>
-
+ 
                 <div className="form-group">
                   <label htmlFor="edit_address">Address</label>
                   <input
@@ -460,7 +460,7 @@ const Users = () => {
                     onChange={handleInputChange}
                   />
                 </div>
-
+ 
                 <div className="form-group">
                   <label htmlFor="edit_mobile_no">Mobile No*</label>
                   <input
@@ -472,7 +472,7 @@ const Users = () => {
                     required
                   />
                 </div>
-
+ 
                 <div className="form-group">
                   <label htmlFor="edit_email_id">Email ID*</label>
                   <input
@@ -484,7 +484,7 @@ const Users = () => {
                     required
                   />
                 </div>
-
+ 
                 <div className="form-group">
                   <label htmlFor="edit_role">Role*</label>
                   <select
@@ -499,7 +499,7 @@ const Users = () => {
                   </select>
                 </div>
               </div>
-
+ 
               <div className="form-actions">
                 <button type="submit" className="btn-submit">
                   <FontAwesomeIcon icon={faSave} /> Update User
@@ -511,7 +511,7 @@ const Users = () => {
             </form>
           </div>
         )}
-
+ 
         {!showAddForm && !showEditForm && (
           <>
             {loading ? (
@@ -524,17 +524,17 @@ const Users = () => {
             ) : users.length === 0 ? (
               <div className="no-users">
                 <p>
-                  {userRole === "Admin" 
-                    ? "No users found for your entity. Add a new user to get started." 
+                  {userRole === "Admin"
+                    ? "No users found for your entity. Add a new user to get started."
                     : "No users found. Add a new user to get started."}
                 </p>
               </div>
             ) : (
               <div className="user-cards-container">
                 {users.map((user, index) => (
-                  <div 
-                    className="user-card" 
-                    key={user.user_id} 
+                  <div
+                    className="user-card"
+                    key={user.user_id}
                     style={{"--index": index}}
                   >
                     <div className="user-card-header">
@@ -548,7 +548,7 @@ const Users = () => {
                         </span>
                       </div>
                     </div>
-                    
+                   
                     <div className="user-card-body">
                       <div className="user-info">
                         <p>
@@ -556,16 +556,16 @@ const Users = () => {
                           <span className="info-label">ID:</span> {user.user_id}
                         </p>
                         <p>
-                          <FontAwesomeIcon icon={faBuilding} /> 
+                          <FontAwesomeIcon icon={faBuilding} />
                           <span className="info-label">Entity:</span> {user.entity_name}
                         </p>
                         <p>
-                          <FontAwesomeIcon icon={faEnvelope} /> 
+                          <FontAwesomeIcon icon={faEnvelope} />
                           <span className="info-label">Email:</span> {user.email_id}
                         </p>
                       </div>
                     </div>
-                    
+                   
                     <div className="user-card-actions">
                       <button
                         className="btn-edit"
@@ -592,5 +592,5 @@ const Users = () => {
     </div>
   );
 };
-
+ 
 export default Users;
