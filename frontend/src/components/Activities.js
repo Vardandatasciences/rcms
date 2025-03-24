@@ -16,6 +16,8 @@ const Activities = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
+  const [userRole, setUserRole] = useState(null);
+  const [userEntityId, setUserEntityId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
   const [filterCategories, setFilterCategories] = useState({
@@ -38,7 +40,16 @@ const Activities = () => {
     if (userData) {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
-      fetchActivities();
+      
+      // Extract user role and entity ID
+      const role = parsedUser.role || "";
+      const entityId = parsedUser.entity_id || parsedUser.entityId || "";
+      
+      setUserRole(role);
+      setUserEntityId(entityId);
+      
+      // Fetch activities based on user role
+      fetchActivities(role, entityId);
     } else {
       navigate("/login");
     }
@@ -81,11 +92,21 @@ const Activities = () => {
     });
   };
 
-  // Fetch activities from backend
-  const fetchActivities = async () => {
+  // Fetch activities from backend based on user role
+  const fetchActivities = async (role, entityId) => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:5000/activities");
+      
+      let response;
+      
+      // If admin, fetch entity-specific activities
+      if (role === "Admin" && entityId) {
+        response = await axios.get(`http://localhost:5000/activities/entity/${entityId}`);
+      } else {
+        // For global users, fetch all activities
+        response = await axios.get("http://localhost:5000/activities");
+      }
+      
       const activitiesData = response.data.activities || [];
       setActivities(activitiesData);
       setFilteredActivities(activitiesData);
@@ -93,7 +114,7 @@ const Activities = () => {
       setLoading(false);
     } catch (err) {
       console.error("Error fetching activities:", err);
-      setError("Failed to fetch activities. Please try again later.");
+      setError(`Failed to fetch activities. ${err.message || "Please try again later."}`);
       setLoading(false);
     }
   };
@@ -121,9 +142,30 @@ const Activities = () => {
     }
   };
 
+  // Refresh activities data
+  const refreshActivities = () => {
+    fetchActivities(userRole, userEntityId);
+  };
+
   // Handle assign button click
   const handleAssign = (regulationId, activityId) => {
-    navigate(`/activities/assign/${regulationId}/${activityId}`);
+    console.log("Navigating to assign activity page:", regulationId, activityId);
+    
+    // Make sure activityId is treated as a string in the URL
+    if (typeof activityId === 'number') {
+      activityId = activityId.toString();
+    }
+    
+    // Check userRole again to prevent global users from accessing
+    if (userRole !== "Admin") {
+      setError("Only Admin users can assign activities.");
+      return;
+    }
+    
+    // Explicit navigate with both params
+    const url = `/activities/assign/${regulationId}/${activityId}`;
+    console.log("Navigation URL:", url);
+    navigate(url);
   };
 
   // Enhanced filter function to handle multiple filter categories
@@ -256,6 +298,12 @@ const Activities = () => {
     <div className="activities-container">
       <Navbar />
       <div className="activities-content">
+        {/* <h1>Activities Management</h1> */}
+        <p>
+          {userRole === "Admin" 
+            ? `Viewing activities for your entity` 
+            : "Viewing all activities in the system"}
+        </p>
         
         {/* Statistics Cards with enhanced animations */}
         <div className="statistics-cards">
@@ -453,7 +501,7 @@ const Activities = () => {
             
             <button 
               className="btn-refresh" 
-              onClick={fetchActivities}
+              onClick={refreshActivities}
               title="Refresh activities"
             >
               <FaSyncAlt />
@@ -485,7 +533,9 @@ const Activities = () => {
             <p>
               {searchTerm || isFilterActive()
                 ? "Try adjusting your search or filters" 
-                : "Click the 'Add New Activity' button to create one"}
+                : userRole === "Admin"
+                  ? "No activities are associated with your entity's regulations"
+                  : "Click the 'Add New Activity' button to create one"}
             </p>
           </div>
         ) : viewMode === 'grid' ? (
@@ -537,12 +587,16 @@ const Activities = () => {
                   >
                     <FaTrashAlt />
                   </button>
-                  <button
-                    className="btn-text-action"
-                    onClick={() => handleAssign(activity.regulation_id, activity.activity_id)}
-                  >
-                    Assign
-                  </button>
+                  
+                  {/* Only show Assign button for Admin users */}
+                  {userRole === "Admin" && (
+                    <button
+                      className="btn-text-action"
+                      onClick={() => handleAssign(activity.regulation_id, activity.activity_id)}
+                    >
+                      Assign
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -624,13 +678,17 @@ const Activities = () => {
                       >
                         <FaTrashAlt size={16} />
                       </button>
-                      <button
-                        className="btn-text-action list-btn-text"
-                        onClick={() => handleAssign(activity.regulation_id, activity.activity_id)}
-                      >
-                        <FaUserCog style={{ marginRight: '5px' }} />
-                        Assign
-                      </button>
+                      
+                      {/* Only show Assign button for Admin users */}
+                      {userRole === "Admin" && (
+                        <button
+                          className="btn-text-action list-btn-text"
+                          onClick={() => handleAssign(activity.regulation_id, activity.activity_id)}
+                        >
+                          <FaUserCog style={{ marginRight: '5px' }} />
+                          Assign
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -640,7 +698,15 @@ const Activities = () => {
         )}
         
         <div className="activities-footer">
-          <p>Showing {filteredActivities.length} of {activities.length} activities</p>
+          <div className="footer-info">
+            <p>Showing {filteredActivities.length} of {activities.length} activities</p>
+            {userRole === "Admin" && (
+              <span className="entity-indicator">
+                <FaBuilding style={{ marginRight: '5px' }} />
+                Viewing activities for your entity
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>

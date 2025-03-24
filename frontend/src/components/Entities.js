@@ -835,7 +835,9 @@ const Entities = () => {
             )}
 
             {loading ? (
-              <div className="loading">Loading entities...</div>
+              <div className="loading">
+                <p>Loading entities...</p>
+              </div>
             ) : error ? (
               <div className="error-message">{error}</div>
             ) : filteredEntities.length === 0 ? (
@@ -845,49 +847,65 @@ const Entities = () => {
                   "No entities match your search criteria."}
               </div>
             ) : (
-              <div className="entities-table-container">
-                <div className="results-count">
-                  Showing {filteredEntities.length} of {entities.length} entities
-                </div>
-                <table className="entities-table">
-          <thead>
-            <tr>
-                      <th>Entity ID</th>
-                      <th>Name</th>
-              <th>Location</th>
-                      <th>Contact Name</th>
-              <th>Contact Phone</th>
-              <th>Country</th>
-                      <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-                    {filteredEntities.map((entity) => (
-              <tr key={entity.entity_id}>
-                        <td>{entity.entity_id}</td>
-                <td>{entity.entity_name}</td>
-                <td>{entity.location}</td>
-                        <td>{entity.contact_name}</td>
-                <td>{entity.contact_phno}</td>
-                <td>{entity.country}</td>
-                        <td className="actions-cell">
-                          <button
-                            className="btn-edit"
-                            onClick={() => handleEditEntity(entity)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="btn-delete"
-                            onClick={() => handleDeleteEntity(entity.entity_id)}
-                          >
-                            Delete
-                          </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              <div className="entity-cards-container">
+                {entities.map((entity, index) => (
+                  <div 
+                    key={entity.entity_id} 
+                    className="entity-card" 
+                    style={{"--index": index}}
+                  >
+                    <div className="entity-card-header">
+                      <div className="entity-avatar">
+                        {entity.entity_name.charAt(0)}
+                      </div>
+                      <div className="entity-name-location">
+                        <h3>{entity.entity_name}</h3>
+                        <div className="entity-location">
+                          <i className="fas fa-map-marker-alt"></i>
+                          {entity.location}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="entity-card-body">
+                      <div className="entity-info">
+                        <p>
+                          <i className="fas fa-user"></i>
+                          <span><span className="info-label">Contact:</span> {entity.contact_name}</span>
+                        </p>
+                        <p>
+                          <i className="fas fa-phone"></i>
+                          <span><span className="info-label">Phone:</span> {entity.contact_phno}</span>
+                        </p>
+                        <p>
+                          <i className="fas fa-user-friends"></i>
+                          <span><span className="info-label">Alt Contact:</span> {entity.alternate_contact_name}</span>
+                        </p>
+                        <p>
+                          <i className="fas fa-globe"></i>
+                          <span><span className="info-label">Country:</span> {entity.country}</span>
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="entity-card-actions">
+                      <button
+                        className="btn-edit"
+                        onClick={() => handleEditEntity(entity)}
+                        title="Edit Entity"
+                      >
+                        <i className="fas fa-edit"></i>
+                      </button>
+                      <button
+                        className="btn-delete"
+                        onClick={() => handleDeleteEntity(entity.entity_id)}
+                        title="Delete Entity"
+                      >
+                        <i className="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </>

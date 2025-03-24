@@ -109,20 +109,36 @@ def delete_user(user_id):
         print("Error:", traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
-@users_bp.route('/entity_users/<string:entity_id>', methods=['GET'])
-def get_entity_users(entity_id):
+# @users_bp.route('/entity_users/<string:entity_id>', methods=['GET'])
+@users_bp.route('/entity_users_admin/<string:entity_id>', methods=['GET'])
+def get_entity_users_admin(entity_id):
     try:
-        # Use SQLAlchemy to query users for the specified entity
-        users = Users.query.filter(
+        # Fetch non-obsolete users and join with entity_master to get entity_name
+        # Filter by the specified entity_id
+        users = db.session.query(
+            Users.user_id,
+            Users.entity_id,
+            EntityMaster.entity_name,
+            Users.user_name,
+            Users.address,
+            Users.mobile_no,
+            Users.email_id,
+            Users.role
+        ).join(
+            EntityMaster, Users.entity_id == EntityMaster.entity_id
+        ).filter(
             Users.entity_id == entity_id,
-            or_(Users.obsolete_current != "O", Users.obsolete_current.is_(None))
+            (Users.obsolete_current != "O") | (Users.obsolete_current.is_(None))
         ).all()
-        
-        # Convert to JSON response
+
         users_list = [
             {
                 "user_id": user.user_id,
+                "entity_id": user.entity_id,
+                "entity_name": user.entity_name,
                 "user_name": user.user_name,
+                "address": user.address,
+                "mobile_no": user.mobile_no,
                 "email_id": user.email_id,
                 "role": user.role
             }
@@ -130,33 +146,52 @@ def get_entity_users(entity_id):
         ]
         
         return jsonify({"users": users_list}), 200
-    
-    except Exception as e:
-        print("Error:", str(e))
-        print(traceback.format_exc())  # Print full traceback for debugging
-        return jsonify({"error": str(e)}), 500 
 
-@users_bp.route('/country_codes', methods=['GET'])
-def get_country_codes():
+    except Exception as e:
+        print(f"Error fetching entity users: {str(e)}")
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    
+
+
+@users_bp.route('/entity_users/<string:entity_id>', methods=['GET'])
+def get_entity_users(entity_id):
     try:
-        # Fetch all country codes
-        countries = CountryCodes.query.all()
-        
-        # Convert to JSON response
-        countries_list = [
+        # Fetch non-obsolete users and join with entity_master to get entity_name
+        # Filter by the specified entity_id
+        users = db.session.query(
+            Users.user_id,
+            Users.entity_id,
+            EntityMaster.entity_name,
+            Users.user_name,
+            Users.address,
+            Users.mobile_no,
+            Users.email_id,
+            Users.role
+        ).join(
+            EntityMaster, Users.entity_id == EntityMaster.entity_id
+        ).filter(
+            Users.entity_id == entity_id,
+            (Users.obsolete_current != "O") | (Users.obsolete_current.is_(None))
+        ).all()
+
+        users_list = [
             {
-                "country": country.country,
-                "country_code": country.country_code
+                "user_id": user.user_id,
+                "entity_id": user.entity_id,
+                "entity_name": user.entity_name,
+                "user_name": user.user_name,
+                "address": user.address,
+                "mobile_no": user.mobile_no,
+                "email_id": user.email_id,
+                "role": user.role
             }
-            for country in countries
+            for user in users
         ]
         
-        # Sort by country name, but put India first
-        countries_list.sort(key=lambda x: (0 if x["country"].lower() == "india" else 1, x["country"]))
-        
-        return jsonify({"countries": countries_list}), 200
-    
+        return jsonify({"users": users_list}), 200
+
     except Exception as e:
-        print("Error:", str(e))
-        print(traceback.format_exc())  # Print full traceback for debugging
+        print(f"Error fetching entity users: {str(e)}")
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
