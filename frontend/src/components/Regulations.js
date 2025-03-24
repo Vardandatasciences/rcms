@@ -6,11 +6,11 @@ import "./Regulations.css";
 import AddRegulation from "./AddRegulation";
 import EditRegulation from "./EditRegulation";
 import DeleteRegulation from "./DeleteRegulation";
-import { FaEdit, FaTrashAlt, FaBuilding, FaGlobe, FaHome, 
-         FaFlag, FaGlobeAmericas, FaCheckCircle, FaCircle, 
-         FaFolder, FaFilter, FaList, FaExclamationTriangle, 
+import { FaEdit, FaTrashAlt, FaBuilding, FaGlobe, FaHome,
+         FaFlag, FaGlobeAmericas, FaCheckCircle, FaCircle,
+         FaFolder, FaFilter, FaList, FaExclamationTriangle,
          FaCheckSquare, FaSquare } from "react-icons/fa";
-
+ 
 const Regulations = () => {
   const [regulations, setRegulations] = useState([]);
   const [filteredRegulations, setFilteredRegulations] = useState([]);
@@ -29,41 +29,41 @@ const Regulations = () => {
   const [selectedRegulations, setSelectedRegulations] = useState([]);
   const [successMessage, setSuccessMessage] = useState("");
   const navigate = useNavigate();
-
+ 
   useEffect(() => {
     // Get user data from session storage
     const userData = sessionStorage.getItem("user");
     if (userData) {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
-      
+     
       // Extract user role and entity ID
       const role = parsedUser.role || "";
       const entityId = parsedUser.entity_id || parsedUser.entityId || "";
-      
+     
       setUserRole(role);
       setUserEntityId(entityId);
-      
+     
       fetchData(entityId, role);
     } else {
       navigate("/login");
     }
   }, [navigate]);
-
+ 
   const fetchData = async (entityId, role) => {
     try {
       setLoading(true);
-      
+     
       // Fetch regulations and categories in parallel
       const [regulationsResponse, categoriesResponse] = await Promise.all([
         axios.get("http://localhost:5000/regulations"),
         axios.get("http://localhost:5000/categories")
       ]);
-      
+     
       const regulationsData = regulationsResponse.data.regulations || [];
       setAllRegulations(regulationsData);
       setCategories(categoriesResponse.data.categories || []);
-      
+     
       // If user is an admin, fetch entity-specific regulations
       if (role === "Admin" && entityId) {
         try {
@@ -83,7 +83,7 @@ const Regulations = () => {
         setRegulations(regulationsData);
         setFilteredRegulations(regulationsData);
       }
-      
+     
       setLoading(false);
     } catch (err) {
       console.error("Error fetching data:", err);
@@ -91,15 +91,15 @@ const Regulations = () => {
       setLoading(false);
     }
   };
-
+ 
   // Function to get category name by ID
   const getCategoryName = (categoryId) => {
     if (!categories || categories.length === 0) return "Unknown Category";
-    
+   
     const category = categories.find(cat => cat.category_id === categoryId);
     return category ? category.category_type : "Unknown Category";
   };
-
+ 
   // Function to handle regulation deletion
   const handleDelete = async (regulationId) => {
     if (window.confirm("Are you sure you want to delete this regulation?")) {
@@ -113,16 +113,16 @@ const Regulations = () => {
       }
     }
   };
-
+ 
   // Function to handle filtering
   const handleFilterChange = (filter) => {
     setActiveFilter(filter);
-    
+   
     if (filter === "all") {
       setFilteredRegulations(regulations);
       return;
     }
-    
+   
     let filtered;
     switch(filter) {
       case "internal":
@@ -146,20 +146,20 @@ const Regulations = () => {
       default:
         filtered = regulations;
     }
-    
+   
     setFilteredRegulations(filtered);
   };
-
+ 
   // Toggle manage regulations mode
   const toggleManageRegulations = () => {
     const newShowManageRegulations = !showManageRegulations;
     setShowManageRegulations(newShowManageRegulations);
-    
+   
     if (newShowManageRegulations) {
       // When showing manage regulations, display all regulations
       setRegulations(allRegulations);
       setFilteredRegulations(allRegulations);
-      
+     
       // Pre-select regulations that are already assigned to the entity
       const preSelectedIds = entityRegulations.map(reg => reg.regulation_id);
       setSelectedRegulations(preSelectedIds);
@@ -169,7 +169,7 @@ const Regulations = () => {
       setFilteredRegulations(entityRegulations);
     }
   };
-
+ 
   // Toggle regulation selection for entity
   const toggleRegulationSelection = (regulationId) => {
     setSelectedRegulations(prevSelected => {
@@ -180,39 +180,39 @@ const Regulations = () => {
       }
     });
   };
-
+ 
   // Check if a regulation is already associated with the entity
   const isRegulationAssociated = (regulationId) => {
     return entityRegulations.some(reg => reg.regulation_id === regulationId);
   };
-
+ 
   // Save selected regulations to entity
   const saveEntityRegulations = async () => {
     try {
       setLoading(true);
-      
+     
       // Prepare data for API call
       const data = {
         entity_id: userEntityId,
         regulation_ids: selectedRegulations
       };
-      
+     
       // Send the request to add entity regulations
       const response = await axios.post("http://localhost:5000/add_entity_regulations", data);
-      
+     
       setSuccessMessage(`Regulations updated successfully! Added: ${response.data.added}, Removed: ${response.data.removed}`);
-      
+     
       // Refresh the data
       await fetchData(userEntityId, userRole);
-      
+     
       // Exit manage mode
       setShowManageRegulations(false);
-      
+     
       // Clear success message after 3 seconds
       setTimeout(() => {
         setSuccessMessage("");
       }, 3000);
-      
+     
       setLoading(false);
     } catch (err) {
       console.error("Error saving entity regulations:", err);
@@ -220,9 +220,9 @@ const Regulations = () => {
       setLoading(false);
     }
   };
-
+ 
   if (!user) return null;
-
+ 
   return (
     <div className="regulations-container">
       <Navbar />
@@ -236,7 +236,7 @@ const Regulations = () => {
         {successMessage && (
           <div className="success-message">{successMessage}</div>
         )}
-
+ 
         {showAddForm ? (
           <AddRegulation categories={categories} onRegulationAdded={fetchData} />
         ) : editingRegulation ? (
@@ -250,58 +250,58 @@ const Regulations = () => {
           <>
             {!showManageRegulations && (
               <div className="filter-tabs">
-                <div 
+                <div
                   className={`filter-tab ${activeFilter === "all" ? "active" : ""}`}
                   onClick={() => handleFilterChange("all")}
                 >
                   <FaList className="filter-tab-icon" /> All Regulations
                 </div>
-                <div 
+                <div
                   className={`filter-tab ${activeFilter === "internal" ? "active" : ""}`}
                   onClick={() => handleFilterChange("internal")}
                 >
                   <FaHome className="filter-tab-icon" /> Internal
                 </div>
-                <div 
+                <div
                   className={`filter-tab ${activeFilter === "external" ? "active" : ""}`}
                   onClick={() => handleFilterChange("external")}
                 >
                   <FaGlobe className="filter-tab-icon" /> External
                 </div>
-                <div 
+                <div
                   className={`filter-tab ${activeFilter === "mandatory" ? "active" : ""}`}
                   onClick={() => handleFilterChange("mandatory")}
                 >
                   <FaCheckSquare className="filter-tab-icon" /> Mandatory
                 </div>
-                <div 
+                <div
                   className={`filter-tab ${activeFilter === "optional" ? "active" : ""}`}
                   onClick={() => handleFilterChange("optional")}
                 >
                   <FaSquare className="filter-tab-icon" /> Optional
                 </div>
-                <div 
+                <div
                   className={`filter-tab ${activeFilter === "national" ? "active" : ""}`}
                   onClick={() => handleFilterChange("national")}
                 >
                   <FaFlag className="filter-tab-icon" /> National
                 </div>
-                <div 
+                <div
                   className={`filter-tab ${activeFilter === "international" ? "active" : ""}`}
                   onClick={() => handleFilterChange("international")}
                 >
                   <FaGlobeAmericas className="filter-tab-icon" /> International
                 </div>
-                
+               
                 <div className="filter-actions">
                   <Link to="/regulations/add" className="btn-add action-btn">
                     Add New Regulation
                   </Link>
-                  
+                 
                   {/* Only show Manage Regulations button for Admin users */}
                   {userRole === "Admin" && (
-                    <button 
-                      className="btn-manage action-btn" 
+                    <button
+                      className="btn-manage action-btn"
                       onClick={toggleManageRegulations}
                     >
                       {showManageRegulations ? "Cancel" : "Manage Regulations"}
@@ -310,20 +310,20 @@ const Regulations = () => {
                 </div>
               </div>
             )}
-            
+           
             {showManageRegulations && (
               <>
                 <div className="manage-regulations-header">
                   <h2>Manage Regulations</h2>
                   <p>Select regulations to associate with your entity:</p>
                   <div className="manage-regulations-actions">
-                    <button 
+                    <button
                       className="btn-save"
                       onClick={saveEntityRegulations}
                     >
                       Save Selected Regulations
                     </button>
-                    <button 
+                    <button
                       className="btn-cancel"
                       onClick={toggleManageRegulations}
                     >
@@ -331,7 +331,7 @@ const Regulations = () => {
                     </button>
                   </div>
                 </div>
-                
+               
                 <div className="regulations-table-container">
                   <table className="regulations-table">
                     <thead>
@@ -350,7 +350,7 @@ const Regulations = () => {
                       {filteredRegulations.map((regulation) => {
                         const isAssociated = isRegulationAssociated(regulation.regulation_id);
                         const isSelected = selectedRegulations.includes(regulation.regulation_id);
-                        
+                       
                         return (
                           <tr key={regulation.regulation_id} className={isSelected ? "selected-row" : ""}>
                             <td className="select-column">
@@ -372,31 +372,31 @@ const Regulations = () => {
                             <td>{regulation.regulatory_body || "N/A"}</td>
                             <td>
                               <span className={`status-badge ${
-                                (regulation.internal_external === "I" || regulation.internal_external === "Internal") 
+                                (regulation.internal_external === "I" || regulation.internal_external === "Internal")
                                   ? "status-internal" : "status-external"}`}
                               >
-                                {regulation.internal_external === "I" ? "Internal" : 
-                                regulation.internal_external === "E" ? "External" : 
+                                {regulation.internal_external === "I" ? "Internal" :
+                                regulation.internal_external === "E" ? "External" :
                                 regulation.internal_external}
                               </span>
                             </td>
                             <td>
                               <span className={`status-badge ${
-                                (regulation.national_international === "N" || regulation.national_international === "National") 
+                                (regulation.national_international === "N" || regulation.national_international === "National")
                                   ? "status-national" : "status-international"}`}
                               >
-                                {regulation.national_international === "N" ? "National" : 
-                                regulation.national_international === "I" ? "International" : 
+                                {regulation.national_international === "N" ? "National" :
+                                regulation.national_international === "I" ? "International" :
                                 regulation.national_international}
                               </span>
                             </td>
                             <td>
                               <span className={`status-badge ${
-                                (regulation.mandatory_optional === "M" || regulation.mandatory_optional === "Mandatory") 
+                                (regulation.mandatory_optional === "M" || regulation.mandatory_optional === "Mandatory")
                                   ? "status-mandatory" : "status-optional"}`}
                               >
-                                {regulation.mandatory_optional === "M" ? "Mandatory" : 
-                                regulation.mandatory_optional === "O" ? "Optional" : 
+                                {regulation.mandatory_optional === "M" ? "Mandatory" :
+                                regulation.mandatory_optional === "O" ? "Optional" :
                                 regulation.mandatory_optional}
                               </span>
                             </td>
@@ -408,7 +408,7 @@ const Regulations = () => {
                 </div>
               </>
             )}
-            
+           
             <div className="regulations-grid">
               {loading ? (
                 <div className="loading">Loading regulations...</div>
@@ -427,7 +427,7 @@ const Regulations = () => {
                               <FaFolder /> {regulation.category_type || getCategoryName(regulation.category_id)}
                             </div>
                           </div>
-                          
+                         
                           <div className="card-content">
                             <div className="card-item">
                               <div className="card-item-icon">
@@ -438,40 +438,40 @@ const Regulations = () => {
                                 <div className="card-item-value">{regulation.regulatory_body || "Not specified"}</div>
                               </div>
                             </div>
-                            
+                           
                             <div className="card-badges">
                               <span className={`card-badge ${
-                                (regulation.internal_external === "I" || regulation.internal_external === "Internal") 
+                                (regulation.internal_external === "I" || regulation.internal_external === "Internal")
                                   ? "badge-internal" : "badge-external"}`}>
-                                {(regulation.internal_external === "I" || regulation.internal_external === "Internal") 
+                                {(regulation.internal_external === "I" || regulation.internal_external === "Internal")
                                   ? <FaHome /> : <FaGlobe />}
-                                {regulation.internal_external === "I" ? "Internal" : 
-                                 regulation.internal_external === "E" ? "External" : 
+                                {regulation.internal_external === "I" ? "Internal" :
+                                 regulation.internal_external === "E" ? "External" :
                                  regulation.internal_external}
                               </span>
-                              
+                             
                               <span className={`card-badge ${
-                                (regulation.national_international === "N" || regulation.national_international === "National") 
+                                (regulation.national_international === "N" || regulation.national_international === "National")
                                   ? "badge-national" : "badge-international"}`}>
-                                {(regulation.national_international === "N" || regulation.national_international === "National") 
+                                {(regulation.national_international === "N" || regulation.national_international === "National")
                                   ? <FaFlag /> : <FaGlobeAmericas />}
-                                {regulation.national_international === "N" ? "National" : 
-                                 regulation.national_international === "I" ? "International" : 
+                                {regulation.national_international === "N" ? "National" :
+                                 regulation.national_international === "I" ? "International" :
                                  regulation.national_international}
                               </span>
-                              
+                             
                               <span className={`card-badge ${
-                                (regulation.mandatory_optional === "M" || regulation.mandatory_optional === "Mandatory") 
+                                (regulation.mandatory_optional === "M" || regulation.mandatory_optional === "Mandatory")
                                   ? "badge-mandatory" : "badge-optional"}`}>
-                                {(regulation.mandatory_optional === "M" || regulation.mandatory_optional === "Mandatory") 
+                                {(regulation.mandatory_optional === "M" || regulation.mandatory_optional === "Mandatory")
                                   ? <FaCheckCircle /> : <FaCircle />}
-                                {regulation.mandatory_optional === "M" ? "Mandatory" : 
-                                 regulation.mandatory_optional === "O" ? "Optional" : 
+                                {regulation.mandatory_optional === "M" ? "Mandatory" :
+                                 regulation.mandatory_optional === "O" ? "Optional" :
                                  regulation.mandatory_optional}
                               </span>
                             </div>
                           </div>
-                          
+                         
                           <div className="card-footer">
                             <Link to={`/regulations/edit/${regulation.regulation_id}`} className="card-btn card-btn-edit">
                               <FaEdit />
@@ -508,5 +508,6 @@ const Regulations = () => {
     </div>
   );
 };
-
+ 
 export default Regulations;
+ 
