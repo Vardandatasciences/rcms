@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Navbar from './components/Navbar';
+import axios from 'axios';
+import { PrivilegeProvider } from './components/PrivilegeContext';
+import PrivilegedRoute from './components/PrivilegedRoute';
 
 // import home page
 import Home from './pages/Home';
@@ -45,166 +49,122 @@ import Tasks from './components/Tasks';
 import ReassignTask from './components/ReassignTask';
 import UserTask from './components/UserTask';
 
-// Protected Route component for role-based access control
-const ProtectedRoute = ({ element, allowedRoles }) => {
-  const userData = sessionStorage.getItem('user');
-  
-  if (!userData) {
-    // Not logged in, redirect to login
-    return <Navigate to="/login" />;
-  }
-  
-  const user = JSON.parse(userData);
-  
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // User doesn't have the required role, redirect to home
-    return <Navigate to="/" />;
-  }
-  
-  // User is authenticated and has the required role, render the component
-  return element;
-};
+// Import the PrivilegeGuard
+import PrivilegeGuard from './components/PrivilegeGuard';
+
+// Import the PrivilegeCheck
+import PrivilegeCheck from './components/PrivilegeCheck';
+
+// Removed Analysis import that was causing an error
 
 function App() {
   return (
-    <Router>
-      <div className="App">
-      <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<Login />} />
-          
-          {/* Make Home the default route */}
-          <Route path="/" element={<Home />} />
-          
-          {/* Protected routes
-          <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
-          <Route path="/dashboard/:role" element={<ProtectedRoute element={<Dashboard />} />} />
-           */}
-          {/* Entity routes - Only for Global role */}
-          <Route 
-            path="/entities" 
-            element={<ProtectedRoute element={<Entities />} allowedRoles={['Global']} />} 
-          />
-          <Route 
-            path="/entities/add" 
-            element={<ProtectedRoute element={<AddEntity />} allowedRoles={['Global']} />} 
-          />
-          <Route 
-            path="/entities/edit/:entityId" 
-            element={<ProtectedRoute element={<EditEntity />} allowedRoles={['Global']} />} 
-          />
-          <Route 
-            path="/entities/delete/:entityId" 
-            element={<ProtectedRoute element={<DeleteEntity />} allowedRoles={['Global']} />} 
-          />
-          
-          {/* User routes - For Admin and User roles */}
-          <Route 
-            path="/users" 
-            element={<ProtectedRoute element={<Users />} allowedRoles={['Admin', 'Global']} />} 
-          />
-          <Route 
-            path="/users/add" 
-            element={<ProtectedRoute element={<AddUser />} allowedRoles={['Admin']} />} 
-          />
-          <Route 
-            path="/users/edit/:userId" 
-            element={<ProtectedRoute element={<EditUser />} allowedRoles={['Admin']} />} 
-          />
-          <Route 
-            path="/users/delete/:userId" 
-            element={<ProtectedRoute element={<DeleteUser />} allowedRoles={['Admin']} />} 
-          />
-          
-          {/* Category routes - For Global and Admin roles */}
-          <Route 
-            path="/categories" 
-            element={<ProtectedRoute element={<Categories />} allowedRoles={['Global', 'Admin']} />} 
-          />
-          <Route 
-            path="/categories/add" 
-            element={<ProtectedRoute element={<AddCategory />} allowedRoles={['Global', 'Admin']} />} 
-          />
-          <Route 
-            path="/categories/delete/:categoryId" 
-            element={<ProtectedRoute element={<DeleteCategory />} allowedRoles={['Global', 'Admin']} />} 
-          />
-          
-          {/* Regulation routes - For Global and Admin roles */}
-          <Route 
-            path="/regulations" 
-            element={<ProtectedRoute element={<Regulations />} allowedRoles={['Global', 'Admin']} />} 
-          />
-          <Route 
-            path="/regulations/add" 
-            element={<ProtectedRoute element={<AddRegulation />} allowedRoles={['Global', 'Admin']} />} 
-          />
-          <Route 
-            path="/regulations/edit/:regulationId" 
-            element={<ProtectedRoute element={<EditRegulation />} allowedRoles={['Global', 'Admin']} />} 
-          />
-          <Route 
-            path="/regulations/delete/:regulationId" 
-            element={<ProtectedRoute element={<DeleteRegulation />} allowedRoles={['Global', 'Admin']} />} 
-          />
-          
-          {/* Activity routes - For Global and Admin roles */}
-          <Route 
-            path="/activities" 
-            element={<ProtectedRoute element={<Activities />} allowedRoles={['Global', 'Admin']} />} 
-          />
-          <Route 
-            path="/activities/add" 
-            element={<ProtectedRoute element={<AddActivity />} allowedRoles={['Global', 'Admin']} />} 
-          />
-          <Route 
-            path="/activities/edit/:regulationId/:activityId" 
-            element={<ProtectedRoute element={<EditActivity />} allowedRoles={['Global', 'Admin']} />} 
-          />
-          <Route 
-            path="/activities/assign/:regulationId/:activityId" 
-            element={<ProtectedRoute element={<AssignActivity />} allowedRoles={['Global', 'Admin']} />} 
-          />
-          
-          {/* Holiday routes - Only for Admin role */}
-          <Route 
-            path="/holidays" 
-            element={<ProtectedRoute element={<Holidays />} allowedRoles={['Admin']} />} 
-          />
-          <Route 
-            path="/holidays/add" 
-            element={<ProtectedRoute element={<AddHoliday />} allowedRoles={['Admin']} />} 
-          />
-          
-          {/* Tasks route - For all roles */}
-          <Route 
-            path="/tasks" 
-            element={<ProtectedRoute element={<Tasks />} allowedRoles={['Global', 'Admin', 'User']} />} 
-          />
-          
-          {/* Analysis route - For all roles */}
-          <Route 
-            path="/analysis" 
-            element={<ProtectedRoute element={<div>Analysis Page</div>} allowedRoles={['Global', 'Admin', 'User']} />} 
-          />
-          
-          {/* Reassign Task route - For Global and Admin roles */}
-          <Route 
-            path="/reassign-task/:taskId" 
-            element={<ProtectedRoute element={<ReassignTask />} allowedRoles={['Global', 'Admin']} />} 
-          />
-          
-          {/* User Task route - For User role */}
-          <Route 
-            path="/user-tasks" 
-            element={<ProtectedRoute element={<UserTask />} allowedRoles={['User']} />} 
-          />
-          
-          {/* Catch all route - redirect to home instead of dashboard */}
-          <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-      </div>
-    </Router>
+    <PrivilegeProvider>
+      <Router>
+        <Navbar />
+        <div className="App">
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Home />} />
+
+            {/* Dashboard */}
+            <Route path="/dashboard" element={
+              <PrivilegedRoute element={<Dashboard />} requiredPrivilege="dashboard_view" />
+            } />
+
+            {/* Entity routes */}
+            <Route path="/entities" element={
+              <PrivilegedRoute element={<Entities />} requiredPrivilege="entity_view" />
+            } />
+            <Route path="/entities/add" element={
+              <PrivilegedRoute element={<AddEntity />} requiredPrivilege="entity_add" />
+            } />
+            <Route path="/entities/edit/:id" element={
+              <PrivilegedRoute element={<EditEntity />} requiredPrivilege="entity_update" />
+            } />
+            <Route path="/entities/delete/:id" element={
+              <PrivilegedRoute element={<DeleteEntity />} requiredPrivilege="entity_delete" />
+            } />
+
+            {/* User routes */}
+            <Route path="/users" element={
+              <PrivilegedRoute element={<Users />} requiredPrivilege="user_view" />
+            } />
+            <Route path="/users/add" element={
+              <PrivilegedRoute element={<AddUser />} requiredPrivilege="user_add" />
+            } />
+            <Route path="/users/edit/:id" element={
+              <PrivilegedRoute element={<EditUser />} requiredPrivilege="user_update" />
+            } />
+            <Route path="/users/delete/:id" element={
+              <PrivilegedRoute element={<DeleteUser />} requiredPrivilege="user_delete" />
+            } />
+
+            {/* Category routes */}
+            <Route path="/categories" element={
+              <PrivilegedRoute element={<Categories />} requiredPrivilege="category_view" />
+            } />
+            <Route path="/categories/add" element={
+              <PrivilegedRoute element={<AddCategory />} requiredPrivilege="category_add" />
+            } />
+            <Route path="/categories/delete/:id" element={
+              <PrivilegedRoute element={<DeleteCategory />} requiredPrivilege="category_delete" />
+            } />
+
+            {/* Regulation routes */}
+            <Route path="/regulations" element={
+              <PrivilegedRoute element={<Regulations />} requiredPrivilege="regulation_view" />
+            } />
+            <Route path="/regulations/add" element={
+              <PrivilegedRoute element={<AddRegulation />} requiredPrivilege="regulation_add" />
+            } />
+            <Route path="/regulations/edit/:id" element={
+              <PrivilegedRoute element={<EditRegulation />} requiredPrivilege="regulation_update" />
+            } />
+            <Route path="/regulations/delete/:id" element={
+              <PrivilegedRoute element={<DeleteRegulation />} requiredPrivilege="regulation_delete" />
+            } />
+
+            {/* Activity routes */}
+            <Route path="/activities" element={
+              <PrivilegedRoute element={<Activities />} requiredPrivilege="activity_view" />
+            } />
+            <Route path="/activities/add" element={
+              <PrivilegedRoute element={<AddActivity />} requiredPrivilege="activity_add" />
+            } />
+            <Route path="/activities/edit/:id" element={
+              <PrivilegedRoute element={<EditActivity />} requiredPrivilege="activity_update" />
+            } />
+            <Route path="/activities/assign" element={
+              <PrivilegedRoute element={<AssignActivity />} requiredPrivilege="activity_assign" />
+            } />
+
+            {/* Holiday routes */}
+            <Route path="/holidays" element={
+              <PrivilegedRoute element={<Holidays />} requiredPrivilege="holiday_view" />
+            } />
+            <Route path="/holidays/add" element={
+              <PrivilegedRoute element={<AddHoliday />} requiredPrivilege="holiday_add" />
+            } />
+
+            {/* Task routes */}
+            <Route path="/tasks" element={
+              <PrivilegedRoute element={<Tasks />} requiredPrivilege="task_view" />
+            } />
+            <Route path="/tasks/reassign/:id" element={
+              <PrivilegedRoute element={<ReassignTask />} requiredPrivilege="task_reassign" />
+            } />
+            <Route path="/tasks/user" element={
+              <PrivilegedRoute element={<UserTask />} requiredPrivilege="task_user_view" />
+            } />
+
+            {/* Catch-all route for 404 */}
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </div>
+      </Router>
+    </PrivilegeProvider>
   );
 }
 

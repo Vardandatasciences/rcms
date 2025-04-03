@@ -18,6 +18,7 @@ def login():
         
     try:
         data = request.json
+        print(data)
         user_id = data.get('user_id')
         password = data.get('password')
 

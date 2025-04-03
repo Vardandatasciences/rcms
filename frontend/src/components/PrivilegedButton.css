@@ -1,0 +1,34 @@
+.privileged-button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+.privileged-button.contained.primary {
+  background-color: #1976d2;
+  color: white;
+}
+
+.privileged-button.contained.error {
+  background-color: #d32f2f;
+  color: white;
+}
+
+.privileged-button:hover:not(.disabled) {
+  opacity: 0.9;
+}
+
+.privileged-button.disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.privileged-button-wrapper {
+  position: relative;
+  display: inline-block;
+} 
