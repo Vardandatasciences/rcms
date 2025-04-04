@@ -11,6 +11,7 @@ from routes.categories import categories_bp
 from routes.holidays import holidays_bp
 from routes.tasks import tasks_bp
 from routes.analysis import analysis_bp
+from routes.privileges import privileges_bp
 from models.models import *
 
 def create_app(config_class=Config):
@@ -33,6 +34,7 @@ def create_app(config_class=Config):
     app.register_blueprint(holidays_bp)
     app.register_blueprint(tasks_bp)
     app.register_blueprint(analysis_bp, url_prefix='/api/analysis')
+    app.register_blueprint(privileges_bp)
     
     # Create database tables if they don't exist
     with app.app_context():

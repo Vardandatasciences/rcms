@@ -598,58 +598,22 @@
 /* Animations for success and error messages */
 .success-message,
 .error-message {
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  animation: message-slide-down 0.5s ease-out forwards;
-  transform: translateY(-20px);
-  opacity: 0;
-}
-
-@keyframes message-slide-down {
-  from {
-    transform: translateY(-20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.success-message {
-  background-color: #d1fae5;
-  color: #065f46;
-  box-shadow: 0 4px 10px rgba(6, 95, 70, 0.1);
-}
-
-.success-message::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  width: 4px;
-  background-color: #059669;
+  padding: 12px 15px;
+  margin: 15px 0;
+  border-radius: 4px;
+  font-weight: 500;
 }
 
 .error-message {
-  background-color: #fee2e2;
-  color: #b91c1c;
-  box-shadow: 0 4px 10px rgba(185, 28, 28, 0.1);
+  background-color: rgba(231, 76, 60, 0.12);
+  color: #e74c3c;
+  border-left: 4px solid #e74c3c;
 }
 
-.error-message::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  width: 4px;
-  background-color: #dc2626;
+.success-message {
+  background-color: rgba(46, 204, 113, 0.12);
+  color: #2ecc71;
+  border-left: 4px solid #2ecc71;
 }
 
 .no-users {
@@ -856,5 +820,357 @@
 
 .phone-input {
   width: 60%;
+}
+
+/* Privileges section styling */
+.privileges-section {
+  margin-top: 2rem;
+  background-color: var(--gray-50);
+  border-radius: 16px;
+  border: 1px solid var(--gray-200);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  animation: fadeInUp 0.5s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.privileges-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, 
+    var(--teal-primary), 
+    var(--purple-primary), 
+    var(--blue-primary), 
+    var(--orange-primary), 
+    var(--pink-primary));
+}
+
+.privileges-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.privileges-header h3 {
+  font-size: 1.2rem;
+  color: var(--gray-800);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.privileges-header h3 svg {
+  color: var(--teal-primary);
+}
+
+.privileges-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn-select-all,
+.btn-clear-all {
+  background: none;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-select-all {
+  color: var(--teal-dark);
+  background-color: rgba(45, 212, 191, 0.1);
+}
+
+.btn-select-all::before {
+  content: '✓';
+  font-weight: bold;
+}
+
+.btn-clear-all {
+  color: var(--gray-600);
+  background-color: rgba(107, 114, 128, 0.1);
+}
+
+.btn-clear-all::before {
+  content: '×';
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.btn-select-all:hover {
+  background-color: rgba(45, 212, 191, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn-clear-all:hover {
+  background-color: rgba(107, 114, 128, 0.2);
+  transform: translateY(-1px);
+}
+
+.privileges-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.privilege-category {
+  margin-bottom: 1.5rem;
+  background-color: white;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-200);
+  transition: all var(--transition-normal);
+}
+
+.privilege-category:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.category-name {
+  color: var(--gray-800);
+  font-size: 1.1rem;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  position: relative;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.category-name::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(to right, var(--teal-primary), transparent);
+  border-radius: 3px;
+}
+
+.category-privileges {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem;
+}
+
+.privilege-item {
+  position: relative;
+}
+
+.privilege-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: all var(--transition-fast);
+}
+
+.privilege-label:hover {
+  background-color: var(--teal-bg);
+}
+
+.privilege-label input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.privilege-checkbox {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 2px solid var(--gray-400);
+  background-color: white;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.privilege-label:hover .privilege-checkbox {
+  border-color: var(--teal-primary);
+}
+
+.privilege-label input[type="checkbox"]:checked + .privilege-checkbox {
+  background-color: var(--teal-primary);
+  border-color: var(--teal-primary);
+}
+
+.privilege-label input[type="checkbox"]:checked + .privilege-checkbox::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  top: 1px;
+}
+
+/* Style for the new privilege icons */
+.privilege-icon {
+  color: var(--gray-500);
+  font-size: 1rem;
+  min-width: 20px;
+  text-align: center;
+  transition: all var(--transition-normal);
+}
+
+.privilege-label:hover .privilege-icon {
+  color: var(--teal-primary);
+  transform: scale(1.2);
+}
+
+.privilege-label input[type="checkbox"]:checked ~ .privilege-icon {
+  color: var(--teal-primary);
+}
+
+.privilege-text {
+  font-size: 0.95rem;
+  color: var(--gray-700);
+  transition: all var(--transition-fast);
+}
+
+.privilege-label:hover .privilege-text {
+  color: var(--gray-900);
+}
+
+.privilege-label input[type="checkbox"]:checked ~ .privilege-text {
+  color: var(--gray-900);
+  font-weight: 500;
+}
+
+/* Responsive adjustments for privileges */
+@media (max-width: 768px) {
+  .privileges-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .privileges-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .privileges-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+/* Spinner animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Input with button - for the user ID generator */
+.input-with-button {
+  display: flex;
+  position: relative;
+}
+
+.input-with-button input {
+  flex-grow: 1;
+  width: calc(100% - 40px); /* Make room for the button */
+}
+
+.input-with-button .btn-generate {
+  position: absolute;
+  right: 0;
+  height: 100%;
+  width: 40px;
+  background: #3498db;
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s;
+}
+
+/* Different color for password generator button */
+.input-with-button .btn-generate[title="Generate a random password"] {
+  background: var(--purple-primary);
+}
+
+.input-with-button .btn-generate[title="Generate a random password"]:hover {
+  background: var(--purple-dark);
+}
+
+.input-with-button .btn-generate:hover {
+  background: #2980b9;
+}
+
+/* Disabled select field style */
+.disabled-select {
+  background-color: var(--gray-100);
+  cursor: not-allowed;
+  opacity: 0.8;
+  border-color: var(--gray-300);
+}
+
+.field-info {
+  font-size: 0.85rem;
+  color: var(--blue-primary);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: rgba(59, 130, 246, 0.08);
+  padding: 5px 8px;
+  border-radius: 4px;
+}
+
+.field-info svg {
+  color: var(--blue-primary);
+}
+
+/* Admin role indicator styles */
+.admin-role-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 10px 15px;
+  border-radius: 8px;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.global-admin-indicator {
+  color: var(--purple-primary);
+  border-left: 3px solid var(--purple-primary);
+}
+
+.entity-admin-indicator {
+  color: var(--teal-primary);
+  border-left: 3px solid var(--teal-primary);
 }
   

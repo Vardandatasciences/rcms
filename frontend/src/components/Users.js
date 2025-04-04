@@ -8,8 +8,13 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUserPlus, faEdit, faTrash, faEnvelope, faIdCard,
   faBuilding, faUserTag, faUserEdit, faSave, faTimes,
-  faSpinner
+  faSpinner, faShieldAlt, faCheck, faLock, faCog, faList,
+  faFileAlt, faClipboardList, faTasks, faCalendarAlt,
+  faChartLine, faUserCog, faTrashAlt, faExchangeAlt, faPlus,
+  faFileUpload, faListAlt, faClipboardCheck, faTools, faRandom,
+  faGlobe, faUniversalAccess, faInfo, faKey
 } from '@fortawesome/free-solid-svg-icons';
+import PrivilegedButton from "./PrivilegedButton"; // Import the PrivilegedButton component
  
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -21,6 +26,41 @@ const Users = () => {
   const [entities, setEntities] = useState([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentUserData, setCurrentUserData] = useState(null);
+  // Added state for available privileges
+  const [availablePrivileges, setAvailablePrivileges] = useState([
+    // User privileges
+    { id: "user_add", name: "Add Users", icon: faUserPlus },
+    { id: "user_update", name: "Update/Modify Users", icon: faUserCog },
+    { id: "user_delete", name: "Delete Users", icon: faTrashAlt },
+    
+    // Category privileges
+    { id: "category_add", name: "Add Categories", icon: faPlus },
+    { id: "category_delete", name: "Delete Categories", icon: faTrashAlt },
+    
+    // Regulation privileges
+    { id: "regulation_add", name: "Add Regulations", icon: faFileUpload },
+    { id: "regulation_manage", name: "Manage Regulations", icon: faFileAlt },
+    { id: "regulation_update", name: "Update/Modify Regulations", icon: faEdit },
+    { id: "regulation_delete", name: "Delete Regulations", icon: faTrashAlt },
+    
+    // Activity privileges
+    { id: "activity_add", name: "Add Activities", icon: faPlus },
+    { id: "activity_update", name: "Update/Modify Activities", icon: faEdit },
+    { id: "activity_delete", name: "Delete Activities", icon: faTrashAlt },
+    { id: "activity_assign", name: "Assign Activities", icon: faClipboardCheck },
+    
+    // Task privileges
+    { id: "task_reassign", name: "Reassign Tasks", icon: faExchangeAlt },
+    
+    // Holiday privileges
+    { id: "holiday_add", name: "Add Holidays", icon: faCalendarAlt },
+    { id: "holiday_delete", name: "Delete Holidays", icon: faTrashAlt },
+    
+    // Analysis privilege
+    { id: "analysis_access", name: "Access Analysis", icon: faChartLine },
+  ]);
   const [newUser, setNewUser] = useState({
     user_id: "",
     entity_id: "",
@@ -29,8 +69,10 @@ const Users = () => {
     mobile_no: "",
     email_id: "",
     password: "",
-    role: ""
+    role: "",
+    privileges: []
   });
+ 
   const navigate = useNavigate();
  
   useEffect(() => {
@@ -40,24 +82,42 @@ const Users = () => {
       navigate("/login");
       return;
     }
+
+    try {
+      // Parse user data
+      const parsedUserData = JSON.parse(userData);
+      setCurrentUserData(parsedUserData);
  
     // Fetch users and entities in parallel
     Promise.all([fetchUsers(), fetchEntities()]).catch(err => {
       console.error("Error in initial data loading:", err);
       setLoading(false);
     });
+    } catch (error) {
+      console.error("Error parsing user data:", error);
+      navigate("/login");
+    }
   }, [navigate]);
  
   const fetchUsers = async () => {
     try {
       setLoading(true);
       const response = await axios.get("http://localhost:5000/users");
-      setUsers(response.data.users || []);
-      return response.data.users;
+      let allUsers = response.data.users || [];
+      
+      // Filter users by entity if current user is an entity admin
+      if (isEntityAdmin() && getCurrentUserEntity()) {
+        allUsers = allUsers.filter(user => user.entity_id === getCurrentUserEntity());
+      }
+      
+      setUsers(allUsers);
+      return allUsers;
     } catch (err) {
       console.error("Error fetching users:", err);
       setError("Failed to fetch users. Please try again later.");
       throw err;
+    } finally {
+      setLoading(false);
     }
   };
  
@@ -78,19 +138,200 @@ const Users = () => {
     const { name, value } = e.target;
     if (showEditForm) {
       setCurrentUser({ ...currentUser, [name]: value });
+      
+      // Reset privileges when changing from Admin to User role
+      if (name === "role" && value !== "Admin") {
+        setCurrentUser(prev => ({...prev, privileges: []}));
+      }
     } else {
       setNewUser({ ...newUser, [name]: value });
+      
+      // Reset privileges when changing from Admin to User role
+      if (name === "role" && value !== "Admin") {
+        setNewUser(prev => ({...prev, privileges: []}));
+      }
     }
   };
+
+  // Add handler for privilege checkboxes
+  const handlePrivilegeChange = (privilegeId) => {
+    if (showEditForm) {
+      // For edit form
+      const updatedPrivileges = currentUser.privileges?.includes(privilegeId)
+        ? currentUser.privileges.filter(id => id !== privilegeId)
+        : [...(currentUser.privileges || []), privilegeId];
+      
+      setCurrentUser({
+        ...currentUser,
+        privileges: updatedPrivileges
+      });
+    } else {
+      // For add form
+      const updatedPrivileges = newUser.privileges?.includes(privilegeId)
+        ? newUser.privileges.filter(id => id !== privilegeId)
+        : [...(newUser.privileges || []), privilegeId];
+      
+      setNewUser({
+        ...newUser,
+        privileges: updatedPrivileges
+      });
+    }
+  };
+
+  const selectAllPrivileges = () => {
+    const allPrivilegeIds = availablePrivileges.map(p => p.id);
+    
+    if (showEditForm) {
+      setCurrentUser({
+        ...currentUser,
+        privileges: allPrivilegeIds
+      });
+    } else {
+      setNewUser({
+        ...newUser,
+        privileges: allPrivilegeIds
+      });
+    }
+  };
+
+  const clearAllPrivileges = () => {
+    if (showEditForm) {
+      setCurrentUser({
+        ...currentUser,
+        privileges: []
+      });
+    } else {
+      setNewUser({
+        ...newUser,
+        privileges: []
+      });
+    }
+  };
+ 
+  // Generate a unique user ID to avoid conflicts
+  const generateUniqueId = () => {
+    // Create a prefix based on the user's name (if available)
+    const namePrefix = newUser.user_name 
+      ? newUser.user_name.split(' ')[0].toLowerCase().substring(0, 3) 
+      : 'usr';
+    
+    // Add current timestamp to ensure uniqueness
+    const timestamp = new Date().getTime().toString().substring(9);
+    
+    // Combine for a reasonably unique ID
+    const uniqueId = `${namePrefix}${timestamp}`;
+    
+    setNewUser({...newUser, user_id: uniqueId});
+  };
+
+  // Generate a random password
+  const generateRandomPassword = () => {
+    const length = 10;
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+";
+    let password = "";
+    for (let i = 0; i < length; i++) {
+      password += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    setNewUser({...newUser, password: password});
+  };
+
+  // Function to strip quotes from JSON error messages
+  const cleanErrorMessage = (message) => {
+    if (!message) return '';
+    return message.replace(/['"]+/g, '');
+  };
+ 
+  // Check if current user is a global admin
+  const isGlobalAdmin = () => {
+    return currentUserData && currentUserData.role === 'Global';
+  };
+
+  // Check if the user is entity admin
+  const isEntityAdmin = () => {
+    return currentUserData && currentUserData.role === 'Admin';
+  };
+
+  // Get the current user's entity
+  const getCurrentUserEntity = () => {
+    return currentUserData ? currentUserData.entity_id : null;
+  };
+
+  // Logic to determine if entity field should be disabled
+  const shouldDisableEntityField = () => {
+    // Disable for entity admins, enable for global admins
+    return isEntityAdmin();
+  };
+
+  // Pre-set entity ID for entity admins
+  useEffect(() => {
+    if (isEntityAdmin() && getCurrentUserEntity() && showAddForm) {
+      setNewUser(prev => ({
+        ...prev,
+        entity_id: getCurrentUserEntity()
+      }));
+    }
+  }, [showAddForm, currentUserData]);
  
   const handleAddUser = async (e) => {
     e.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
+    setIsSubmitting(true);
  
     try {
-      const response = await axios.post("http://localhost:5000/add_user", newUser);
-      setSuccessMessage(response.data.message);
+      // For entity admins, enforce their entity_id
+      if (isEntityAdmin()) {
+        if (newUser.entity_id !== getCurrentUserEntity()) {
+          setErrorMessage("Entity admins can only add users to their own entity");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // Validate mobile number (should be 10 digits)
+      if (!/^\d{10}$/.test(newUser.mobile_no)) {
+        setErrorMessage("Mobile number must be 10 digits");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Ensure user_id is not empty or 'new' (which causes conflicts)
+      if (!newUser.user_id || newUser.user_id === 'new') {
+        setErrorMessage("Please provide a unique User ID or generate one using the button");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Extract privileges from the user data
+      const { privileges, ...userData } = newUser;
+      
+      console.log('Adding user with data:', userData);
+      
+      // Step 1: Add user without privileges
+      const response = await axios.post("http://localhost:5000/add_user", userData);
+      console.log('User added response:', response.data);
+      
+      // Step 2: If user is Admin and has privileges, add privileges separately
+      if (userData.role === "Admin" && privileges.length > 0) {
+        try {
+          console.log('Adding privileges for user:', userData.user_id, privileges);
+          const privResponse = await axios.post("http://localhost:5000/add_user_privileges", {
+            user_id: userData.user_id,
+            entity_id: userData.entity_id,
+            privileges: privileges
+          });
+          console.log('Privileges added response:', privResponse.data);
+        } catch (privilegeError) {
+          console.error("Error adding privileges:", privilegeError);
+          const errorMsg = privilegeError.response?.data?.message || privilegeError.message;
+          console.error(`Detailed privilege error: ${errorMsg}`);
+          
+          // We don't want to fail the entire operation if just privileges fail
+          setSuccessMessage("User added successfully, but there was an issue setting privileges.");
+        }
+      }
+      
+      setSuccessMessage(response.data.message || "User added successfully");
      
       // Reset form and refresh users list
       setNewUser({
@@ -101,7 +342,8 @@ const Users = () => {
         mobile_no: "",
         email_id: "",
         password: "",
-        role: ""
+        role: "",
+        privileges: []
       });
      
       // Close the form after a short delay
@@ -111,28 +353,102 @@ const Users = () => {
         fetchUsers();
       }, 2000);
     } catch (error) {
-      if (error.response && error.response.status === 409) {
-        setErrorMessage("User ID already exists. Please enter a unique User ID.");
-      } else {
-        setErrorMessage("Error adding user. Please try again.");
-        console.error("Error adding user:", error);
+      console.error("Full error object:", error);
+      let errorMessage = "Error adding user. Please try again.";
+      
+      if (error.response) {
+        console.error("Error response data:", error.response.data);
+        if (error.response.status === 409) {
+          errorMessage = "User ID already exists. Please enter a unique User ID or use the generate button.";
+        } else if (error.response.data && error.response.data.message) {
+          errorMessage = cleanErrorMessage(error.response.data.message);
+        }
       }
+      
+      setErrorMessage(errorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
   };
  
   const handleEditUser = (user) => {
-    setCurrentUser(user);
+    // Load user privileges if they exist
+    const fetchUserPrivileges = async () => {
+      try {
+        console.log(`Fetching privileges for user: ${user.user_id}`);
+        // You may need to adjust this endpoint based on your API
+        const response = await axios.get(`http://localhost:5000/user_privileges/${user.user_id}`);
+        
+        if (response.data && response.data.success) {
+          const userWithPrivileges = {
+            ...user,
+            privileges: response.data.privileges || []
+          };
+          console.log('User privileges loaded:', response.data.privileges);
+          setCurrentUser(userWithPrivileges);
+        } else {
+          console.warn('No privileges found or invalid response structure:', response.data);
+          setCurrentUser({...user, privileges: []});
+        }
+      } catch (error) {
+        console.error("Error fetching user privileges:", error);
+        // Try to extract the error message from the response if available
+        const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
+        console.error(`Detailed error: ${errorMsg}`);
+        
+        // If there's an error, still set the user but with empty privileges
+        setCurrentUser({...user, privileges: []});
+      }
+    };
+    
+    // Set loading state while fetching privileges
+    setLoading(true);
+    
+    fetchUserPrivileges()
+      .finally(() => {
+        setLoading(false);
     setShowEditForm(true);
     setShowAddForm(false);
+      });
   };
  
   const handleUpdateUser = async (e) => {
     e.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
+    setIsSubmitting(true);
  
     try {
-      const response = await axios.put(`http://localhost:5000/update_user/${currentUser.user_id}`, currentUser);
+      // Entity admins can only modify users from their entity
+      if (isEntityAdmin()) {
+        if (currentUser.entity_id !== getCurrentUserEntity()) {
+          setErrorMessage("Entity admins can only modify users from their own entity");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
+      // Extract privileges from the user data to avoid sending it directly to the Users table
+      const { privileges, ...userData } = currentUser;
+      
+      // Step 1: Update user without privileges
+      const response = await axios.put(`http://localhost:5000/update_user/${userData.user_id}`, userData);
+      
+      // Step 2: If user is Admin, update privileges separately
+      if (userData.role === "Admin") {
+        try {
+          await axios.post(`http://localhost:5000/update_user_privileges`, {
+            user_id: userData.user_id,
+            entity_id: userData.entity_id,
+            privileges: privileges || []
+          });
+        } catch (privilegeError) {
+          console.error("Error updating privileges:", privilegeError);
+          // We don't want to fail the entire operation if just privileges fail
+          setSuccessMessage("User updated successfully, but there was an issue updating privileges.");
+        }
+      }
+      
       setSuccessMessage(response.data.message);
      
       // Close the form after a short delay
@@ -145,6 +461,8 @@ const Users = () => {
     } catch (error) {
       setErrorMessage("Error updating user. Please try again.");
       console.error("Error updating user:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
  
@@ -175,7 +493,8 @@ const Users = () => {
       mobile_no: "",
       email_id: "",
       password: "",
-      role: ""
+      role: "",
+      privileges: []
     });
   };
  
@@ -185,22 +504,44 @@ const Users = () => {
     setErrorMessage("");
     setSuccessMessage("");
   };
+
+  // Helper function to group privileges by category
+  const groupPrivilegesByCategory = () => {
+    const groups = {};
+    availablePrivileges.forEach(privilege => {
+      const category = privilege.id.split('_')[0];
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(privilege);
+    });
+    return groups;
+  };
  
   return (
     <div className="users-container">
       <Navbar />
       <div className="users-content">
         <h1>Users Management</h1>
-        <p>View and manage system users</p>
+        {isGlobalAdmin() && (
+          <p><FontAwesomeIcon icon={faGlobe} /> You have global administrator access to manage users across all entities</p>
+        )}
+        {isEntityAdmin() && (
+          <p><FontAwesomeIcon icon={faBuilding} /> You can manage users within your entity: {currentUserData?.entity_name || getCurrentUserEntity()}</p>
+        )}
  
         <div className="users-actions">
-          <button className="btn-add-user" onClick={toggleAddForm}>
+          <PrivilegedButton 
+            requiredPrivilege="user_add" 
+            className="btn-add-user" 
+            onClick={toggleAddForm}
+          >
             {showAddForm ? (
               <><FontAwesomeIcon icon={faTimes} /> Cancel</>
             ) : (
               <><FontAwesomeIcon icon={faUserPlus} /> Add New User</>
             )}
-          </button>
+          </PrivilegedButton>
         </div>
  
         {successMessage && (
@@ -218,14 +559,25 @@ const Users = () => {
               <div className="form-grid">
                 <div className="form-group">
                   <label htmlFor="user_id">User ID*</label>
-                  <input
-                    type="text"
-                    id="user_id"
-                    name="user_id"
-                    value={newUser.user_id}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <div className="input-with-button">
+                    <input
+                      type="text"
+                      id="user_id"
+                      name="user_id"
+                      value={newUser.user_id}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="Enter a unique ID or generate one"
+                    />
+                    <button 
+                      type="button" 
+                      onClick={generateUniqueId}
+                      title="Generate a unique ID"
+                      className="btn-generate"
+                    >
+                      <FontAwesomeIcon icon={faRandom} />
+                    </button>
+                  </div>
                 </div>
  
                 <div className="form-group">
@@ -236,6 +588,8 @@ const Users = () => {
                     value={newUser.entity_id}
                     onChange={handleInputChange}
                     required
+                    disabled={isEntityAdmin()}
+                    className={isEntityAdmin() ? "disabled-select" : ""}
                   >
                     <option value="">Select Entity</option>
                     {entities.map((entity) => (
@@ -244,6 +598,11 @@ const Users = () => {
                       </option>
                     ))}
                   </select>
+                  {isEntityAdmin() && (
+                    <div className="field-info">
+                      <FontAwesomeIcon icon={faInfo} /> Entity admins can only add users to their own entity
+                    </div>
+                  )}
                 </div>
  
                 <div className="form-group">
@@ -295,14 +654,24 @@ const Users = () => {
  
                 <div className="form-group">
                   <label htmlFor="password">Password*</label>
-                  <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    value={newUser.password}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <div className="input-with-button">
+                    <input
+                      type="password"
+                      id="password"
+                      name="password"
+                      value={newUser.password}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <button 
+                      type="button" 
+                      onClick={generateRandomPassword}
+                      title="Generate a random password"
+                      className="btn-generate"
+                    >
+                      <FontAwesomeIcon icon={faKey} />
+                    </button>
+                  </div>
                 </div>
  
                 <div className="form-group">
@@ -315,16 +684,80 @@ const Users = () => {
                     required
                   >
                     <option value="">Select Role</option>
-                    <option value="Admin">Admin</option>
+                    {isGlobalAdmin() && <option value="Global">Global Admin</option>}
+                    <option value="Admin">Entity Admin</option>
                     <option value="User">User</option>
                   </select>
                 </div>
               </div>
+
+              {/* Privileges section - only show for Admin or Global roles */}
+              {(newUser.role === "Admin" || newUser.role === "Global") && (
+                <div className="privileges-section">
+                  <div className="privileges-header">
+                    <h3>
+                      <FontAwesomeIcon icon={faShieldAlt} /> 
+                      Assign Privileges
+                    </h3>
+                    <div className="privileges-actions">
+                      <button 
+                        type="button" 
+                        className="btn-select-all" 
+                        onClick={selectAllPrivileges}
+                      >
+                        Select All
+                      </button>
+                      <button 
+                        type="button" 
+                        className="btn-clear-all" 
+                        onClick={clearAllPrivileges}
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="privileges-list">
+                    {Object.entries(groupPrivilegesByCategory()).map(([category, privileges]) => (
+                      <div key={category} className="privilege-category">
+                        <h4 className="category-name">{category.charAt(0).toUpperCase() + category.slice(1)}</h4>
+                        <div className="category-privileges">
+                          {privileges.map(privilege => (
+                            <div key={privilege.id} className="privilege-item">
+                              <label className="privilege-label">
+                                <input
+                                  type="checkbox"
+                                  name="privileges"
+                                  value={privilege.id}
+                                  checked={newUser.privileges.includes(privilege.id)}
+                                  onChange={() => handlePrivilegeChange(privilege.id)}
+                                />
+                                <span className="privilege-checkbox"></span>
+                                <FontAwesomeIcon icon={privilege.icon} className="privilege-icon" />
+                                <span className="privilege-text">{privilege.name}</span>
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
  
               <div className="form-actions">
-                <button type="submit" className="btn-submit">
-                  <FontAwesomeIcon icon={faSave} /> Save User
-                </button>
+                <PrivilegedButton 
+                  type="submit" 
+                  className="btn-submit" 
+                  disabled={isSubmitting}
+                  requiredPrivilege="user_add"
+                >
+                  {isSubmitting ? (
+                    <><FontAwesomeIcon icon={faSpinner} className="spinner" /> Saving...</>
+                  ) : (
+                    <><FontAwesomeIcon icon={faSave} /> Save User</>
+                  )}
+                </PrivilegedButton>
                 <button type="button" className="btn-cancel" onClick={toggleAddForm}>
                   <FontAwesomeIcon icon={faTimes} /> Cancel
                 </button>
@@ -357,6 +790,8 @@ const Users = () => {
                     value={currentUser.entity_id}
                     onChange={handleInputChange}
                     required
+                    disabled={isEntityAdmin()}
+                    className={isEntityAdmin() ? "disabled-select" : ""}
                   >
                     {entities.map((entity) => (
                       <option key={entity.entity_id} value={entity.entity_id}>
@@ -364,6 +799,11 @@ const Users = () => {
                       </option>
                     ))}
                   </select>
+                  {isEntityAdmin() && (
+                    <div className="field-info">
+                      <FontAwesomeIcon icon={faInfo} /> Entity admins can only edit users within their own entity
+                    </div>
+                  )}
                 </div>
  
                 <div className="form-group">
@@ -422,17 +862,81 @@ const Users = () => {
                     onChange={handleInputChange}
                     required
                   >
-                    <option value="Admin">Admin</option>
+                    {isGlobalAdmin() && <option value="Global">Global Admin</option>}
+                    <option value="Admin">Entity Admin</option>
                     <option value="User">User</option>
-               
                   </select>
                 </div>
               </div>
+
+              {/* Privileges section for Edit form - only show for Admin or Global roles */}
+              {(currentUser.role === "Admin" || currentUser.role === "Global") && (
+                <div className="privileges-section">
+                  <div className="privileges-header">
+                    <h3>
+                      <FontAwesomeIcon icon={faShieldAlt} /> 
+                      Assign Privileges
+                    </h3>
+                    <div className="privileges-actions">
+                      <button 
+                        type="button" 
+                        className="btn-select-all" 
+                        onClick={selectAllPrivileges}
+                      >
+                        Select All
+                      </button>
+                      <button 
+                        type="button" 
+                        className="btn-clear-all" 
+                        onClick={clearAllPrivileges}
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="privileges-list">
+                    {Object.entries(groupPrivilegesByCategory()).map(([category, privileges]) => (
+                      <div key={category} className="privilege-category">
+                        <h4 className="category-name">{category.charAt(0).toUpperCase() + category.slice(1)}</h4>
+                        <div className="category-privileges">
+                          {privileges.map(privilege => (
+                            <div key={privilege.id} className="privilege-item">
+                              <label className="privilege-label">
+                                <input
+                                  type="checkbox"
+                                  name="privileges"
+                                  value={privilege.id}
+                                  checked={currentUser.privileges?.includes(privilege.id)}
+                                  onChange={() => handlePrivilegeChange(privilege.id)}
+                                />
+                                <span className="privilege-checkbox"></span>
+                                <FontAwesomeIcon icon={privilege.icon} className="privilege-icon" />
+                                <span className="privilege-text">{privilege.name}</span>
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
  
               <div className="form-actions">
-                <button type="submit" className="btn-submit">
-                  <FontAwesomeIcon icon={faSave} /> Update User
-                </button>
+                <PrivilegedButton 
+                  type="submit" 
+                  className="btn-submit"
+                  disabled={isSubmitting}
+                  requiredPrivilege="user_update"
+                  entityId={currentUser?.entity_id}
+                >
+                  {isSubmitting ? (
+                    <><FontAwesomeIcon icon={faSpinner} className="spinner" /> Updating...</>
+                  ) : (
+                    <><FontAwesomeIcon icon={faSave} /> Update User</>
+                  )}
+                </PrivilegedButton>
                 <button type="button" className="btn-cancel" onClick={cancelEdit}>
                   <FontAwesomeIcon icon={faTimes} /> Cancel
                 </button>
@@ -492,20 +996,24 @@ const Users = () => {
                     </div>
                    
                     <div className="user-card-actions">
-                      <button
+                      <PrivilegedButton
                         className="btn-edit"
                         onClick={() => handleEditUser(user)}
                         title="Edit user"
+                        requiredPrivilege="user_update"
+                        entityId={user.entity_id}
                       >
                         <FontAwesomeIcon icon={faEdit} />
-                      </button>
-                      <button
+                      </PrivilegedButton>
+                      <PrivilegedButton
                         className="btn-delete"
                         onClick={() => handleDeleteUser(user.user_id)}
                         title="Delete user"
+                        requiredPrivilege="user_delete"
+                        entityId={user.entity_id}
                       >
                         <FontAwesomeIcon icon={faTrash} />
-                      </button>
+                      </PrivilegedButton>
                     </div>
                   </div>
                 ))}

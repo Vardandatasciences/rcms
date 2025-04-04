@@ -192,3 +192,22 @@ class Users(db.Model):
 
     def __repr__(self):
         return f"<Users ID: {self.user_id}, Name: {self.user_name}, Role: {self.role}>"
+
+# Privileges Table
+class Privileges(db.Model):
+    __tablename__ = 'privileges'
+    
+    privilege_id = db.Column(db.String(40), primary_key=True)
+    entity_id = db.Column(db.String(15), db.ForeignKey('entity_master.entity_id'), nullable=False)
+    user_id = db.Column(db.String(15), db.ForeignKey('users.user_id'), nullable=False)
+    privileges_list = db.Column(db.Text, nullable=False)
+    
+    # Define relationships
+    user = db.relationship('Users', backref=db.backref('privileges', lazy=True))
+    entity = db.relationship('EntityMaster', backref=db.backref('entity_privileges', lazy=True))
+    
+    def __init__(self, privilege_id, entity_id, user_id, privileges_list):
+        self.privilege_id = privilege_id
+        self.entity_id = entity_id
+        self.user_id = user_id
+        self.privileges_list = privileges_list

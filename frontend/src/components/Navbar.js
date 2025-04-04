@@ -93,8 +93,8 @@ const Navbar = () => {
               </li>
             )}
 
-            {/* Users - Not visible to Global role */}
-            {user.role !== 'Global' && (
+            {/* Users - Now visible to both Global and Admin roles */}
+            {(user.role === 'Global' || user.role === 'Admin') && (
               <li className="nav-item">
                 <Link to="/users" className={`nav-link ${isActive('/users') ? 'active' : ''}`}>
                   <FaUsers className="nav-icon" />
