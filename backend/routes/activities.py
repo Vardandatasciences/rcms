@@ -318,7 +318,7 @@ def assign_task():
     try:
         data = request.get_json()
         logging.info(f"Received task assignment data: {data}")
-        
+       
         # Extract required fields
         entity_id = data.get('entity_id')
         regulation_id = data.get('regulation_id')
@@ -326,18 +326,18 @@ def assign_task():
         preparation_responsibility = data.get('preparation_responsibility')
         review_responsibility = data.get('review_responsibility')
         due_on = data.get('due_on')
-        
+       
         if not all([entity_id, regulation_id, activity_id, preparation_responsibility, review_responsibility, due_on]):
             logging.error("Missing required fields in request")
             return jsonify({'error': 'Missing required fields'}), 400
-            
+           
         # Check if task already exists
         existing_task = EntityRegulationTasks.query.filter_by(
             entity_id=entity_id,
             regulation_id=regulation_id,
             activity_id=activity_id
         ).first()
-        
+       
         if existing_task:
             logging.info(f"Task already exists for entity {entity_id}, regulation {regulation_id}, activity {activity_id}")
             return jsonify({
@@ -350,28 +350,28 @@ def assign_task():
                     'review_responsibility': existing_task.review_responsibility
                 }
             }), 409
-            
+           
         # Get activity and regulation details using composite primary key
         activity = ActivityMaster.query.filter_by(
-            regulation_id=regulation_id, 
+            regulation_id=regulation_id,
             activity_id=activity_id
         ).first()
-        
+       
         regulation = RegulationMaster.query.filter_by(
             regulation_id=regulation_id
         ).first()
-        
+       
         if not activity or not regulation:
             logging.error(f"Activity or regulation not found. Activity: {activity}, Regulation: {regulation}")
             return jsonify({'error': 'Activity or regulation not found'}), 404
-            
+           
         # Convert due_on to datetime
         try:
             due_date = datetime.strptime(due_on, '%Y-%m-%d').date()
         except ValueError as e:
             logging.error(f"Invalid date format: {due_on}")
             return jsonify({'error': 'Invalid date format'}), 400
-        
+       
         # Calculate next due date based on frequency
         try:
             if activity.frequency == 12:  # Monthly
@@ -387,15 +387,15 @@ def assign_task():
         except Exception as e:
             logging.error(f"Error calculating next due date: {str(e)}")
             next_due_date = due_date
-            
+           
         # Get user details first
         prep_user = Users.query.get(preparation_responsibility)
         review_user = Users.query.get(review_responsibility)
-        
+       
         if not prep_user or not review_user:
             logging.error(f"User details not found. Prep user: {prep_user}, Review user: {review_user}")
             return jsonify({'error': 'User details not found'}), 404
-            
+           
         # Create task record
         task = EntityRegulationTasks(
                 entity_id=entity_id,
@@ -427,10 +427,10 @@ def assign_task():
         except Exception as e:
             logging.error(f"Error sending emails: {str(e)}")
             # Continue with the response even if email sending fails
-        
+       
         return jsonify({
             'message': 'Task assigned successfully',
-            'task_id': task.task_id,
+            'activity_id': activity_id,
             'due_date': due_date.strftime('%Y-%m-%d'),
             'next_due_date': next_due_date.strftime('%Y-%m-%d'),
             'preparation_user': {
@@ -470,6 +470,7 @@ def adjust_due_date_for_holidays(due_date):
     
     return due_date
 
+<<<<<<< HEAD
 @activities_bp.route('/entity_tasks/<string:entity_id>', methods=['GET'])
 def get_entity_tasks(entity_id):
     try:
@@ -573,3 +574,37 @@ def get_entity_regulation_tasks(entity_id):
         print(traceback.format_exc())
         return jsonify({'error': str(e), 'tasks': []}), 500
 
+=======
+
+
+@activities_bp.route('/activities/entity/<string:entity_id>', methods=['GET'])
+def get_entity_activities(entity_id):
+    try:
+        print(f"Fetching activities for entity: {entity_id}")  # Debug log
+        
+        # Query activities associated with the entity's regulations
+        activities = db.session.query(ActivityMaster).join(
+            EntityRegulation,
+            ActivityMaster.regulation_id == EntityRegulation.regulation_id
+        ).filter(
+            EntityRegulation.entity_id == entity_id
+        ).all()
+
+        activities_list = [{
+            "regulation_id": activity.regulation_id,
+            "activity_id": activity.activity_id,
+            "activity": activity.activity,
+            "activity_description": activity.activity_description,
+            "criticality": activity.criticality,
+            "mandatory_optional": activity.mandatory_optional,
+            "frequency": activity.frequency
+        } for activity in activities]
+        
+        print(f"Found {len(activities_list)} activities")  # Debug log
+        
+        return jsonify({"activities": activities_list}), 200
+
+    except Exception as e:
+        print(f"Error fetching activities: {str(e)}")  # Debug log
+        return jsonify({"error": str(e)}), 500
+>>>>>>> main

@@ -169,12 +169,21 @@ const Home = () => {
   // Function to handle "Get Started" button click
   const handleGetStarted = () => {
     const userData = sessionStorage.getItem('user');
-    if (userData) {
-      // User is logged in, redirect to dashboard
-      navigate('/dashboard');
-    } else {
-      // User is not logged in, redirect to login
+    
+    if (!userData) {
+      // Not logged in, redirect to login
       navigate('/login');
+      return;
+    }
+    
+    const user = JSON.parse(userData);
+    
+    // Redirect based on user role
+    if (user.role === 'User') {
+      navigate('/user-tasks');
+    } else {
+      // Admin, Global and other roles
+      navigate('/tasks');
     }
   };
 

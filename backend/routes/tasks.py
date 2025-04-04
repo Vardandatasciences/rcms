@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, session
 from models import db
-from models.models import EntityRegulationTasks, RegulationMaster, ActivityMaster, Users, HolidayMaster
+from models.models import EntityRegulationTasks, RegulationMaster, ActivityMaster, Users, HolidayMaster ,EntityMaster
 from sqlalchemy import or_
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -20,7 +20,7 @@ TENANT_ID = 'aa7c8c45-41a3-4453-bc9a-3adfe8ff5fb6'
 AUTHORITY = f'https://login.microsoftonline.com/{TENANT_ID}'
 REDIRECT_URI = 'http://localhost:5000/getAToken'
 SCOPES = ['https://graph.microsoft.com/.default']
-
+ 
 def get_access_token():
     try:
         app = ConfidentialClientApplication(
@@ -28,62 +28,62 @@ def get_access_token():
             authority=AUTHORITY,
             client_credential=CLIENT_SECRET
         )
-        
+       
         result = app.acquire_token_silent(SCOPES, account=None)
-        
+       
         if not result:
             result = app.acquire_token_for_client(scopes=SCOPES)
-            
+           
         if "access_token" in result:
             return result['access_token']
         else:
             print(f"Error getting token: {result.get('error')}")
             print(f"Error description: {result.get('error_description')}")
             return None
-            
+           
     except Exception as e:
         print(f"Error in get_access_token: {str(e)}")
         return None
-
+ 
 def create_calendar_invite(task_details, is_reviewer=False):
     try:
         cal = Calendar()
         cal.add('prodid', '-//RCMS Task Calendar//EN')
         cal.add('version', '2.0')
         cal.add('method', 'REQUEST')
-        
+       
         event = Event()
         event.add('summary', f"RCMS Task: {task_details['activity_name']}")
         event.add('description', f"""
         Regulation: {task_details['regulation_name']}
         Role: {'Reviewer' if is_reviewer else 'Assignee'}
         {'Assignee: ' + task_details['assignee_name'] if is_reviewer else 'Reviewer: ' + task_details['reviewer_name']}
-        
+       
         This is an automated calendar entry from RCMS.
         """)
-        
+       
         # Convert due date string to datetime
         due_date = datetime.strptime(task_details['due_on'], '%Y-%m-%d')
         event.add('dtstart', due_date.replace(hour=9, minute=0, tzinfo=pytz.UTC))
         event.add('dtend', due_date.replace(hour=17, minute=0, tzinfo=pytz.UTC))
         event.add('dtstamp', datetime.now(pytz.UTC))
-        
+       
         # Add unique identifier
         event['uid'] = f"RCMS-TASK-{task_details.get('task_id', '')}-{is_reviewer}-{due_date.strftime('%Y%m%d')}"
-        
+       
         # Add status and priority
         event.add('status', 'CONFIRMED')
         event.add('priority', 5)
-        
+       
         # Add organizer
         event.add('organizer', f"mailto:{SMTP_USERNAME}")
-        
+       
         cal.add_component(event)
         return cal
     except Exception as e:
         print(f"Error creating calendar invite: {str(e)}")
         return None
-
+ 
 def send_email_notification(recipient_email, recipient_name, task_details, is_reviewer=False):
     try:
         # Get access token
@@ -91,39 +91,39 @@ def send_email_notification(recipient_email, recipient_name, task_details, is_re
         if not access_token:
             print("Failed to get access token")
             return False
-
+ 
         # Prepare the email message
         role = "Reviewer" if is_reviewer else "Assignee"
         action = "reassigned" if task_details.get('is_reassignment') else "assigned"
-        
+       
         # Create HTML body
         html_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; background-color: #f9fafb; margin: 0; padding: 20px;">
             <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <h2 style="color: #2563eb; margin-bottom: 20px; text-align: center;">RCMS Task {action.title()}</h2>
-                
+               
                 <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
                     <p style="margin: 0 0 15px 0;"><strong>Dear {recipient_name},</strong></p>
                     <p style="margin: 0 0 15px 0;">You have been {action} as the {role.lower()} for the following task:</p>
-                    
+                   
                     <div style="background-color: #ffffff; padding: 15px; border-radius: 6px; margin: 15px 0;">
                         <p style="margin: 8px 0;"><strong>Activity:</strong> {task_details['activity_name']}</p>
                         <p style="margin: 8px 0;"><strong>Regulation:</strong> {task_details['regulation_name']}</p>
                         <p style="margin: 8px 0;"><strong>Due Date:</strong> {task_details['due_on']}</p>
                         <p style="margin: 8px 0;"><strong>{'Assignee' if is_reviewer else 'Reviewer'}:</strong> {task_details['assignee_name'] if is_reviewer else task_details['reviewer_name']}</p>
                     </div>
-                    
+                   
                     <p style="margin: 15px 0 0 0;">{
-                        "Please review this task once it's completed by the assignee." if is_reviewer else 
+                        "Please review this task once it's completed by the assignee." if is_reviewer else
                         "Please complete this task before the due date."
                     }</p>
                 </div>
-                
+               
                 <div style="text-align: center; margin-top: 20px;">
                     <p style="color: #4b5563;">You can access the task through the RCMS portal.</p>
                 </div>
-                
+               
                 <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
                     <p style="color: #4b5563; font-size: 14px;">Best regards,<br>RCMS Team</p>
                 </div>
@@ -131,7 +131,7 @@ def send_email_notification(recipient_email, recipient_name, task_details, is_re
         </body>
         </html>
         """
-
+ 
         # Prepare the email request using application permissions
         email_data = {
             "message": {
@@ -150,27 +150,27 @@ def send_email_notification(recipient_email, recipient_name, task_details, is_re
             },
             "saveToSentItems": "true"
         }
-
+ 
         # Send the email using Microsoft Graph API with application permissions
         headers = {
             'Authorization': f'Bearer {access_token}',
             'Content-Type': 'application/json'
         }
-
+ 
         # Use the users endpoint directly with the recipient's email
         response = requests.post(
             f'https://graph.microsoft.com/v1.0/users/{recipient_email}/sendMail',
             headers=headers,
             json=email_data
         )
-
+ 
         if response.status_code in [202, 200]:
             print(f"Email sent successfully to {recipient_email}")
             return True
         else:
             print(f"Failed to send email. Status code: {response.status_code}")
             print(f"Response: {response.text}")
-            
+           
             # Try sending through shared mailbox if available
             shared_mailbox = "noreply@yourdomain.com"  # Replace with your actual shared mailbox
             alternative_response = requests.post(
@@ -178,7 +178,7 @@ def send_email_notification(recipient_email, recipient_name, task_details, is_re
                 headers=headers,
                 json=email_data
             )
-            
+           
             if alternative_response.status_code in [202, 200]:
                 print(f"Email sent successfully using shared mailbox to {recipient_email}")
                 return True
@@ -186,70 +186,72 @@ def send_email_notification(recipient_email, recipient_name, task_details, is_re
                 print(f"Failed to send email using shared mailbox. Status code: {alternative_response.status_code}")
                 print(f"Response: {alternative_response.text}")
                 return False
-
+ 
     except Exception as e:
         print(f"Error sending email: {str(e)}")
         traceback.print_exc()
         return False
+# Sign in to your account
+ 
 
-@tasks_bp.route('/entity_regulation_tasks/<string:entity_id>', methods=['GET'])
-def get_entity_regulation_tasks(entity_id):
-    try:
-        # Use SQLAlchemy to query tasks for the specified entity
-        tasks_query = db.session.query(
-            EntityRegulationTasks,
-            RegulationMaster.regulation_name,
-            ActivityMaster.activity.label('activity_name')
-        ).join(
-            RegulationMaster,
-            EntityRegulationTasks.regulation_id == RegulationMaster.regulation_id
-        ).join(
-            ActivityMaster,
-            (EntityRegulationTasks.regulation_id == ActivityMaster.regulation_id) &
-            (EntityRegulationTasks.activity_id == ActivityMaster.activity_id)
-        ).filter(
-            EntityRegulationTasks.entity_id == entity_id
-        )
+# @tasks_bp.route('/entity_regulation_tasks/<string:entity_id>', methods=['GET'])
+# def get_entity_regulation_tasks(entity_id):
+#     try:
+#         # Use SQLAlchemy to query tasks for the specified entity
+#         tasks_query = db.session.query(
+#             EntityRegulationTasks,
+#             RegulationMaster.regulation_name,
+#             ActivityMaster.activity.label('activity_name')
+#         ).join(
+#             RegulationMaster,
+#             EntityRegulationTasks.regulation_id == RegulationMaster.regulation_id
+#         ).join(
+#             ActivityMaster,
+#             (EntityRegulationTasks.regulation_id == ActivityMaster.regulation_id) &
+#             (EntityRegulationTasks.activity_id == ActivityMaster.activity_id)
+#         ).filter(
+#             EntityRegulationTasks.entity_id == entity_id
+#         )
         
-        tasks = tasks_query.all()
+#         tasks = tasks_query.all()
         
-        # Convert to JSON response
-        tasks_list = [
-            {
-                "id": task.EntityRegulationTasks.id,
-                "entity_id": task.EntityRegulationTasks.entity_id,
-                "regulation_id": task.EntityRegulationTasks.regulation_id,
-                "regulation_name": task.regulation_name,
-                "activity_id": task.EntityRegulationTasks.activity_id,
-                "activity_name": task.activity_name,
-                "activity": task.activity_name,  # For backward compatibility
-                "preparation_responsibility": task.EntityRegulationTasks.preparation_responsibility,
-                "review_responsibility": task.EntityRegulationTasks.review_responsibility,
-                "due_on": task.EntityRegulationTasks.due_on.strftime('%Y-%m-%d') if task.EntityRegulationTasks.due_on else None,
-                "start_date": task.EntityRegulationTasks.start_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.start_date else None,
-                "end_date": task.EntityRegulationTasks.end_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.end_date else None,
-                "status": task.EntityRegulationTasks.status,
-                "ews": task.EntityRegulationTasks.ews,
-                "remarks": task.EntityRegulationTasks.remarks,
-                "upload": task.EntityRegulationTasks.upload,
-                "review_remarks": task.EntityRegulationTasks.review_remarks,
-                "review_start_date": task.EntityRegulationTasks.review_start_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.review_start_date else None,
-                "review_end_date": task.EntityRegulationTasks.review_end_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.review_end_date else None,
-                "review_upload": task.EntityRegulationTasks.review_upload,
-                "mandatory_optional": task.EntityRegulationTasks.mandatory_optional,
-                "criticality": task.EntityRegulationTasks.criticality,
-                "internal_external": task.EntityRegulationTasks.internal_external,
-                "documentupload_yes_no": task.EntityRegulationTasks.documentupload_yes_no
-            }
-            for task in tasks
-        ]
+#         # Convert to JSON response
+#         tasks_list = [
+#             {
+#                 "id": task.EntityRegulationTasks.id,
+#                 "entity_id": task.EntityRegulationTasks.entity_id,
+#                 "regulation_id": task.EntityRegulationTasks.regulation_id,
+#                 "regulation_name": task.regulation_name,
+#                 "activity_id": task.EntityRegulationTasks.activity_id,
+#                 "activity_name": task.activity_name,
+#                 "activity": task.activity_name,  # For backward compatibility
+#                 "preparation_responsibility": task.EntityRegulationTasks.preparation_responsibility,
+#                 "review_responsibility": task.EntityRegulationTasks.review_responsibility,
+#                 "due_on": task.EntityRegulationTasks.due_on.strftime('%Y-%m-%d') if task.EntityRegulationTasks.due_on else None,
+#                 "start_date": task.EntityRegulationTasks.start_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.start_date else None,
+#                 "end_date": task.EntityRegulationTasks.end_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.end_date else None,
+#                 "status": task.EntityRegulationTasks.status,
+#                 "ews": task.EntityRegulationTasks.ews,
+#                 "remarks": task.EntityRegulationTasks.remarks,
+#                 "upload": task.EntityRegulationTasks.upload,
+#                 "review_remarks": task.EntityRegulationTasks.review_remarks,
+#                 "review_start_date": task.EntityRegulationTasks.review_start_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.review_start_date else None,
+#                 "review_end_date": task.EntityRegulationTasks.review_end_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.review_end_date else None,
+#                 "review_upload": task.EntityRegulationTasks.review_upload,
+#                 "mandatory_optional": task.EntityRegulationTasks.mandatory_optional,
+#                 "criticality": task.EntityRegulationTasks.criticality,
+#                 "internal_external": task.EntityRegulationTasks.internal_external,
+#                 "documentupload_yes_no": task.EntityRegulationTasks.documentupload_yes_no
+#             }
+#             for task in tasks
+#         ]
         
-        return jsonify({"tasks": tasks_list}), 200
+#         return jsonify({"tasks": tasks_list}), 200
     
-    except Exception as e:
-        print("Error:", str(e))
-        print(traceback.format_exc())  # Print full traceback for debugging
-        return jsonify({"error": str(e)}), 500
+#     except Exception as e:
+#         print("Error:", str(e))
+#         print(traceback.format_exc())  # Print full traceback for debugging
+#         return jsonify({"error": str(e)}), 500
 
 @tasks_bp.route('/check_task_exists/<string:entity_id>/<string:regulation_id>/<string:activity_id>', methods=['GET'])
 def check_task_exists(entity_id, regulation_id, activity_id):
@@ -426,45 +428,45 @@ def reassign_task():
         # Validate required fields
         if not all([task_id, entity_id, regulation_id, activity_id, preparation_responsibility, review_responsibility]):
             return jsonify({'error': 'Missing required fields'}), 400
-        
+       
         # Get user ID from session or use a default value
         user_id = session.get('user_id', 'SYSTEM')
-        
+       
         # Find the task using SQLAlchemy ORM
         task = EntityRegulationTasks.query.filter_by(
-            id=task_id, 
+            id=task_id,
             entity_id=entity_id,
             regulation_id=regulation_id,
             activity_id=activity_id
         ).first()
-        
+       
         if not task:
             return jsonify({'error': 'Task not found'}), 404
-        
+       
         # Check if the task status is "Completed" - prevent reassignment
         if task.status == "Completed":
             return jsonify({'error': 'Completed tasks cannot be reassigned'}), 403
-        
+       
         # Update the task
         task.preparation_responsibility = preparation_responsibility
         task.review_responsibility = review_responsibility
         task.last_updated_by = user_id
         task.last_updated_on = datetime.now()
-        
+       
         # Get user details for notifications
         prep_user = Users.query.filter_by(user_id=preparation_responsibility).first()
         review_user = Users.query.filter_by(user_id=review_responsibility).first()
-        
+       
         # Get activity and regulation names from the database
         activity = ActivityMaster.query.filter_by(
             regulation_id=regulation_id,
             activity_id=activity_id
         ).first()
-        
+       
         regulation = RegulationMaster.query.filter_by(
             regulation_id=regulation_id
         ).first()
-        
+       
         # Get task details with reassignment flag
         task_details = {
             'task_id': task_id,
@@ -475,10 +477,10 @@ def reassign_task():
             'reviewer_name': review_user.user_name if review_user else 'Unknown',
             'is_reassignment': True  # Add flag to indicate this is a reassignment
         }
-        
+       
         notifications_sent = {'assignee': False, 'reviewer': False}
         notification_errors = []
-        
+       
         # Send notifications if users are found and have email addresses
         if prep_user and hasattr(prep_user, 'email_id') and prep_user.email_id:
             try:
@@ -494,7 +496,7 @@ def reassign_task():
                 notification_errors.append(f"Error sending assignee email: {str(e)}")
         else:
             notification_errors.append(f"Assignee email not found for user: {preparation_responsibility}")
-
+ 
         if review_user and hasattr(review_user, 'email_id') and review_user.email_id:
             try:
                 notifications_sent['reviewer'] = send_email_notification(
@@ -509,23 +511,26 @@ def reassign_task():
                 notification_errors.append(f"Error sending reviewer email: {str(e)}")
         else:
             notification_errors.append(f"Reviewer email not found for user: {review_responsibility}")
-        
+       
         db.session.commit()
-        
+       
         response_data = {
             'message': 'Task reassigned successfully',
             'notifications_sent': notifications_sent,
             'notification_errors': notification_errors if notification_errors else None,
             'task_details': task_details
         }
-        
+       
         return jsonify(response_data), 200
-        
+       
     except Exception as e:
         db.session.rollback()
         print(f"Error in reassign_task: {str(e)}")
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+    
+
+
 
 @tasks_bp.route('/task/<int:task_id>', methods=['GET'])
 def get_task_details(task_id):
@@ -655,3 +660,230 @@ def update_task_status():
         traceback.print_exc()
         return jsonify({'error': 'An error occurred while updating task status'}), 500 
     
+
+
+@tasks_bp.route('/all_regulation_tasks', methods=['GET'])
+def get_all_regulation_tasks():
+    try:
+        # Use SQLAlchemy to query all tasks across all entities
+        tasks_query = db.session.query(
+            EntityRegulationTasks,
+            RegulationMaster.regulation_name,
+            ActivityMaster.activity.label('activity_name'),
+            EntityMaster.entity_name  # Add entity_name to provide context
+        ).join(
+            RegulationMaster,
+            EntityRegulationTasks.regulation_id == RegulationMaster.regulation_id
+        ).join(
+            ActivityMaster,
+            (EntityRegulationTasks.regulation_id == ActivityMaster.regulation_id) &
+            (EntityRegulationTasks.activity_id == ActivityMaster.activity_id)
+        ).join(
+            EntityMaster,
+            EntityRegulationTasks.entity_id == EntityMaster.entity_id
+        )
+        
+        tasks = tasks_query.all()
+        
+        # Convert to JSON response
+        tasks_list = [
+            {
+                "id": task.EntityRegulationTasks.id,
+                "entity_id": task.EntityRegulationTasks.entity_id,
+                "entity_name": task.entity_name,  # Include entity name for Global users
+                "regulation_id": task.EntityRegulationTasks.regulation_id,
+                "regulation_name": task.regulation_name,
+                "activity_id": task.EntityRegulationTasks.activity_id,
+                "activity_name": task.activity_name,
+                "activity": task.activity_name,  # For backward compatibility
+                "preparation_responsibility": task.EntityRegulationTasks.preparation_responsibility,
+                "review_responsibility": task.EntityRegulationTasks.review_responsibility,
+                "due_on": task.EntityRegulationTasks.due_on.strftime('%Y-%m-%d') if task.EntityRegulationTasks.due_on else None,
+                "start_date": task.EntityRegulationTasks.start_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.start_date else None,
+                "end_date": task.EntityRegulationTasks.end_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.end_date else None,
+                "status": task.EntityRegulationTasks.status,
+                "ews": task.EntityRegulationTasks.ews,
+                "remarks": task.EntityRegulationTasks.remarks,
+                "upload": task.EntityRegulationTasks.upload,
+                "review_remarks": task.EntityRegulationTasks.review_remarks,
+                "review_start_date": task.EntityRegulationTasks.review_start_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.review_start_date else None,
+                "review_end_date": task.EntityRegulationTasks.review_end_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.review_end_date else None,
+                "review_upload": task.EntityRegulationTasks.review_upload,
+                "mandatory_optional": task.EntityRegulationTasks.mandatory_optional,
+                "criticality": task.EntityRegulationTasks.criticality,
+                "internal_external": task.EntityRegulationTasks.internal_external,
+                "documentupload_yes_no": task.EntityRegulationTasks.documentupload_yes_no
+            }
+            for task in tasks
+        ]
+        
+        return jsonify({"tasks": tasks_list}), 200
+    
+    except Exception as e:
+        print("Error:", str(e))
+        print(traceback.format_exc())  # Print full traceback for debugging
+        return jsonify({"error": str(e)}), 500
+
+@tasks_bp.route('/entity_regulation_tasks/<string:entity_id>', methods=['GET'])
+def get_entity_regulation_tasks(entity_id):
+    try:
+        # Use SQLAlchemy to query tasks for the specified entity
+        tasks_query = db.session.query(
+            EntityRegulationTasks,
+            RegulationMaster.regulation_name,
+            ActivityMaster.activity.label('activity_name')
+        ).join(
+            RegulationMaster,
+            EntityRegulationTasks.regulation_id == RegulationMaster.regulation_id
+        ).join(
+            ActivityMaster,
+            (EntityRegulationTasks.regulation_id == ActivityMaster.regulation_id) &
+            (EntityRegulationTasks.activity_id == ActivityMaster.activity_id)
+        ).filter(
+            EntityRegulationTasks.entity_id == entity_id
+        )
+        
+        tasks = tasks_query.all()
+        
+        # Convert to JSON response
+        tasks_list = [
+            {
+                "id": task.EntityRegulationTasks.id,
+                "entity_id": task.EntityRegulationTasks.entity_id,
+                "regulation_id": task.EntityRegulationTasks.regulation_id,
+                "regulation_name": task.regulation_name,
+                "activity_id": task.EntityRegulationTasks.activity_id,
+                "activity_name": task.activity_name,
+                "activity": task.activity_name,  # For backward compatibility
+                "preparation_responsibility": task.EntityRegulationTasks.preparation_responsibility,
+                "review_responsibility": task.EntityRegulationTasks.review_responsibility,
+                "due_on": task.EntityRegulationTasks.due_on.strftime('%Y-%m-%d') if task.EntityRegulationTasks.due_on else None,
+                "start_date": task.EntityRegulationTasks.start_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.start_date else None,
+                "end_date": task.EntityRegulationTasks.end_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.end_date else None,
+                "status": task.EntityRegulationTasks.status,
+                "ews": task.EntityRegulationTasks.ews,
+                "remarks": task.EntityRegulationTasks.remarks,
+                "upload": task.EntityRegulationTasks.upload,
+                "review_remarks": task.EntityRegulationTasks.review_remarks,
+                "review_start_date": task.EntityRegulationTasks.review_start_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.review_start_date else None,
+                "review_end_date": task.EntityRegulationTasks.review_end_date.strftime('%Y-%m-%d') if task.EntityRegulationTasks.review_end_date else None,
+                "review_upload": task.EntityRegulationTasks.review_upload,
+                "mandatory_optional": task.EntityRegulationTasks.mandatory_optional,
+                "criticality": task.EntityRegulationTasks.criticality,
+                "internal_external": task.EntityRegulationTasks.internal_external,
+                "documentupload_yes_no": task.EntityRegulationTasks.documentupload_yes_no
+            }
+            for task in tasks
+        ]
+        
+        return jsonify({"tasks": tasks_list}), 200
+    
+    except Exception as e:
+        print("Error:", str(e))
+        print(traceback.format_exc())  # Print full traceback for debugging
+        return jsonify({"error": str(e)}), 500
+
+@tasks_bp.route('/update_task', methods=['POST'])
+def update_task():
+    try:
+        # Check if the request contains form data
+        if 'id' not in request.form:
+            return jsonify({"error": "Missing task ID"}), 400
+       
+        task_id = request.form.get('id')
+       
+        # Find the task
+        task = EntityRegulationTasks.query.get(task_id)
+        if not task:
+            return jsonify({"error": "Task not found"}), 404
+ 
+        # Update assigner fields
+        if 'status' in request.form:
+            status = request.form.get('status')
+            remarks = request.form.get('remarks')
+           
+            task.status = status
+            if remarks is not None:
+                task.remarks = remarks
+           
+            # Set dates based on status
+            if status == 'WIP' and not task.start_date:
+                task.start_date = datetime.now().date()
+            elif status == 'Completed' and not task.end_date:
+                task.end_date = datetime.now().date()
+ 
+            # Handle assigner file upload
+            if 'upload' in request.files:
+                file = request.files['upload']
+                if file and file.filename:
+                    filename = f"{task.entity_id}_{task.regulation_id}_{task.activity_id}_task_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                    if not os.path.exists('uploads'):
+                        os.makedirs('uploads')
+                    file_path = os.path.join('uploads', filename)
+                    file.save(file_path)
+                    task.upload = file_path
+ 
+        # Update reviewer fields
+        if 'review_status' in request.form:
+            review_status = request.form.get('review_status')
+            review_remarks = request.form.get('review_remarks')
+           
+            # Add review_status column if it doesn't exist
+            try:
+                from sqlalchemy import text
+                with db.engine.connect() as connection:
+                    connection.execute(text("ALTER TABLE entity_regulation_tasks ADD COLUMN IF NOT EXISTS review_status VARCHAR(20)"))
+                    connection.commit()
+            except Exception as e:
+                print("Error adding review_status column:", str(e))
+                # Continue even if column already exists
+           
+            # Set review status using setattr to handle potential missing column
+            setattr(task, 'review_status', review_status)
+            if review_remarks is not None:
+                task.review_remarks = review_remarks
+           
+            # Set review dates based on status
+            if review_status == 'WIP' and not task.review_start_date:
+                task.review_start_date = datetime.now().date()
+            elif review_status == 'Completed' and not task.review_end_date:
+                task.review_end_date = datetime.now().date()
+ 
+            # Handle reviewer file upload
+            if 'review_upload' in request.files:
+                review_file = request.files['review_upload']
+                if review_file and review_file.filename:
+                    review_filename = f"{task.entity_id}_{task.regulation_id}_{task.activity_id}_review_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                    if not os.path.exists('uploads'):
+                        os.makedirs('uploads')
+                    review_file_path = os.path.join('uploads', review_filename)
+                    review_file.save(review_file_path)
+                    task.review_upload = review_file_path
+       
+        db.session.commit()
+       
+        # Get review_status safely using getattr with default value
+        review_status_value = getattr(task, 'review_status', None)
+       
+        return jsonify({
+            "message": "Task updated successfully",
+            "task": {
+                "id": task.id,
+                "status": task.status,
+                "remarks": task.remarks,
+                "review_status": review_status_value,
+                "review_remarks": task.review_remarks,
+                "upload": task.upload,
+                "review_upload": task.review_upload,
+                "start_date": task.start_date.strftime('%Y-%m-%d') if task.start_date else None,
+                "end_date": task.end_date.strftime('%Y-%m-%d') if task.end_date else None,
+                "review_start_date": task.review_start_date.strftime('%Y-%m-%d') if task.review_start_date else None,
+                "review_end_date": task.review_end_date.strftime('%Y-%m-%d') if task.review_end_date else None
+            }
+        }), 200
+   
+    except Exception as e:
+        print("Error:", str(e))
+        print(traceback.format_exc())
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

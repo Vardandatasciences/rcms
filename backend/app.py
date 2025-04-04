@@ -13,6 +13,7 @@ from routes.tasks import tasks_bp
 from routes.analysis import analysis_bp
 from routes.privileges import privileges_bp
 from models.models import *
+from routes.global_dash import analysis_global_dash
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -21,8 +22,8 @@ def create_app(config_class=Config):
     # Initialize extensions
     db.init_app(app)
     
-    # Enable CORS
-    CORS(app, resources={r"/*": {"origins": "*"}})
+    # Enable CORS with specific options
+    CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     
     # Register blueprints
     app.register_blueprint(auth_bp)
@@ -39,6 +40,11 @@ def create_app(config_class=Config):
     # Create database tables if they don't exist
     with app.app_context():
         db.create_all()
+    
+    # Register blueprint with proper debugging
+    print("Registering analysis_global_dash blueprint")
+    app.register_blueprint(analysis_global_dash)
+    print(f"Registered routes: {[str(rule) for rule in app.url_map.iter_rules()]}")
     
     return app
 
@@ -62,4 +68,4 @@ def get_task_summary(factory_id):
     return jsonify(dummy_data)
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(debug=True, port=5000) 

@@ -23,7 +23,7 @@ const Login = () => {
   useEffect(() => {
     const userData = sessionStorage.getItem("user");
     if (userData) {
-      navigate("/dashboard");
+      navigate("/tasks");
     }
   }, [navigate]);
 
@@ -73,8 +73,8 @@ const Login = () => {
         // Store user data in session storage
         sessionStorage.setItem("user", JSON.stringify(userData));
         
-        // Redirect to dashboard
-        navigate("/dashboard");
+        // Redirect to home page instead of dashboard
+        navigate('/');
       } else {
         setError("Invalid response from server. Please try again.");
       }

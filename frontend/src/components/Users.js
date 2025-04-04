@@ -61,6 +61,8 @@ const Users = () => {
     // Analysis privilege
     { id: "analysis_access", name: "Access Analysis", icon: faChartLine },
   ]);
+  const [userRole, setUserRole] = useState(null); // Added for role-based filtering
+  const [userEntityId, setUserEntityId] = useState(null); // Added for entity-based filtering
   const [newUser, setNewUser] = useState({
     user_id: "",
     entity_id: "",
@@ -72,7 +74,6 @@ const Users = () => {
     role: "",
     privileges: []
   });
- 
   const navigate = useNavigate();
  
   useEffect(() => {
@@ -82,36 +83,64 @@ const Users = () => {
       navigate("/login");
       return;
     }
-
+ 
     try {
       // Parse user data
       const parsedUserData = JSON.parse(userData);
-      setCurrentUserData(parsedUserData);
- 
-    // Fetch users and entities in parallel
-    Promise.all([fetchUsers(), fetchEntities()]).catch(err => {
-      console.error("Error in initial data loading:", err);
+     
+      // Get user role and entity ID
+      const role = parsedUserData.role || "";
+      setUserRole(role);
+     
+      // Get entity_id - check all possible locations in the user data structure
+      let entityId = null;
+     
+      if (parsedUserData.entity_id) {
+        entityId = parsedUserData.entity_id;
+      } else if (parsedUserData.entityId) {
+        entityId = parsedUserData.entityId;
+      } else if (parsedUserData.entityid) {
+        entityId = parsedUserData.entityid;
+      } else if (parsedUserData.entId) {
+        entityId = parsedUserData.entId;
+      } else if (parsedUserData.entityID) {
+        entityId = parsedUserData.entityID;
+      }
+     
+      setUserEntityId(entityId);
+     
+      // Fetch data based on user role and entity ID
+      Promise.all([fetchUsers(role, entityId), fetchEntities()]).catch(err => {
+        console.error("Error in initial data loading:", err);
+        setLoading(false);
+      });
+    } catch (err) {
+      console.error("Error parsing user data:", err);
+      setError("Invalid user session. Please log in again.");
       setLoading(false);
-    });
-    } catch (error) {
-      console.error("Error parsing user data:", error);
-      navigate("/login");
     }
   }, [navigate]);
  
-  const fetchUsers = async () => {
+  const fetchUsers = async (role, entityId) => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:5000/users");
-      let allUsers = response.data.users || [];
-      
-      // Filter users by entity if current user is an entity admin
-      if (isEntityAdmin() && getCurrentUserEntity()) {
-        allUsers = allUsers.filter(user => user.entity_id === getCurrentUserEntity());
+      let response;
+ 
+      console.log("Fetching users for role: " + role + " and entityId: " + entityId);
+     
+      // For Admin users, fetch only users for their entity
+      if (role === "Global") {
+        console.log("Fetching all users for Global user");
+        response = await axios.get("http://localhost:5000/users");
+      } else {
+        // For Global users, fetch all users
+       
+        console.log(`Fetching users for entity: ${entityId}`);
+        response = await axios.get(`http://localhost:5000/entity_users_admin/${entityId}`);
       }
-      
-      setUsers(allUsers);
-      return allUsers;
+     
+      setUsers(response.data.users || []);
+      return response.data.users;
     } catch (err) {
       console.error("Error fetching users:", err);
       setError("Failed to fetch users. Please try again later.");
@@ -456,7 +485,8 @@ const Users = () => {
         setShowEditForm(false);
         setCurrentUser(null);
         setSuccessMessage("");
-        fetchUsers();
+        // Refresh users with the current role and entity ID
+        fetchUsers(userRole, userEntityId);
       }, 2000);
     } catch (error) {
       setErrorMessage("Error updating user. Please try again.");
@@ -471,7 +501,7 @@ const Users = () => {
       try {
         await axios.delete(`http://localhost:5000/delete_user/${userId}`);
         // Refresh the users list
-        fetchUsers();
+        fetchUsers(userRole, userEntityId);
       } catch (err) {
         console.error("Error deleting user:", err);
         setError("Failed to delete user. Please try again later.");
@@ -496,6 +526,14 @@ const Users = () => {
       role: "",
       privileges: []
     });
+   
+    // If user is Admin, pre-select their entity in the add form
+    if (userRole === "Admin" && userEntityId && !showAddForm) {
+      setNewUser(prev => ({
+        ...prev,
+        entity_id: userEntityId
+      }));
+    }
   };
  
   const cancelEdit = () => {
@@ -522,14 +560,12 @@ const Users = () => {
     <div className="users-container">
       <Navbar />
       <div className="users-content">
-        <h1>Users Management</h1>
-        {isGlobalAdmin() && (
-          <p><FontAwesomeIcon icon={faGlobe} /> You have global administrator access to manage users across all entities</p>
-        )}
-        {isEntityAdmin() && (
-          <p><FontAwesomeIcon icon={faBuilding} /> You can manage users within your entity: {currentUserData?.entity_name || getCurrentUserEntity()}</p>
-        )}
- 
+        {/* <h1>Users Management</h1>
+        <p>
+          {userRole === "Admin"
+            ? "View and manage users for your entity"
+            : "View and manage all system users"}
+        </p> */}
         <div className="users-actions">
           <PrivilegedButton 
             requiredPrivilege="user_add" 
@@ -590,6 +626,7 @@ const Users = () => {
                     required
                     disabled={isEntityAdmin()}
                     className={isEntityAdmin() ? "disabled-select" : ""}
+                    disabled={userRole === "Admin"} // Disable for Admin users
                   >
                     <option value="">Select Entity</option>
                     {entities.map((entity) => (
@@ -598,10 +635,10 @@ const Users = () => {
                       </option>
                     ))}
                   </select>
-                  {isEntityAdmin() && (
-                    <div className="field-info">
-                      <FontAwesomeIcon icon={faInfo} /> Entity admins can only add users to their own entity
-                    </div>
+                  {userRole === "Admin" && (
+                    <small className="form-text text-muted">
+                      Entity is auto-selected for Admin users.
+                    </small>
                   )}
                 </div>
  
@@ -792,6 +829,7 @@ const Users = () => {
                     required
                     disabled={isEntityAdmin()}
                     className={isEntityAdmin() ? "disabled-select" : ""}
+                    disabled={userRole === "Admin"} // Disable for Admin users
                   >
                     {entities.map((entity) => (
                       <option key={entity.entity_id} value={entity.entity_id}>
@@ -799,10 +837,10 @@ const Users = () => {
                       </option>
                     ))}
                   </select>
-                  {isEntityAdmin() && (
-                    <div className="field-info">
-                      <FontAwesomeIcon icon={faInfo} /> Entity admins can only edit users within their own entity
-                    </div>
+                  {userRole === "Admin" && (
+                    <small className="form-text text-muted">
+                      Entity cannot be changed by Admin users.
+                    </small>
                   )}
                 </div>
  
@@ -865,6 +903,7 @@ const Users = () => {
                     {isGlobalAdmin() && <option value="Global">Global Admin</option>}
                     <option value="Admin">Entity Admin</option>
                     <option value="User">User</option>
+               
                   </select>
                 </div>
               </div>
@@ -956,7 +995,11 @@ const Users = () => {
               <div className="error-message">{error}</div>
             ) : users.length === 0 ? (
               <div className="no-users">
-                <p>No users found. Add a new user to get started.</p>
+                <p>
+                  {userRole === "Admin"
+                    ? "No users found for your entity. Add a new user to get started."
+                    : "No users found. Add a new user to get started."}
+                </p>
               </div>
             ) : (
               <div className="user-cards-container">
@@ -1027,4 +1070,3 @@ const Users = () => {
 };
  
 export default Users;
- 

@@ -1,32 +1,58 @@
-from flask import Blueprint, jsonify, request, session
-from models import db
-from models.models import EntityRegulationTasks, RegulationMaster, ActivityMaster, Users, HolidayMaster
-from sqlalchemy import or_
-from datetime import datetime
-from dateutil.relativedelta import relativedelta
-import traceback
+from flask import Blueprint, jsonify, render_template
+from models.models import Users, EntityMaster, db
+from flask_cors import cross_origin
 
+# Create a Blueprint for analysis routes
 analysis_bp = Blueprint('analysis', __name__)
 
-@analysis_bp.route('/api/task-summary', methods=['GET'])
-def get_task_summary():
+@analysis_bp.route('/analysis/users', methods=['GET'])
+@cross_origin()
+def get_users_for_analysis():
+    """
+    Get all users data for analysis dashboard
+    """
     try:
-        # Get user from session
-        user_data = session.get('user')
-        if not user_data or user_data.get('role') != 'Admin':
-            return jsonify({"error": "Unauthorized access"}), 403
+        # Fetch non-obsolete users and join with entity_master to get entity_name
+        users = db.session.query(
+            Users.user_id,
+            Users.entity_id,
+            EntityMaster.entity_name,
+            Users.user_name,
+            Users.address,
+            Users.mobile_no,
+            Users.email_id,
+            Users.role
+        ).join(EntityMaster, Users.entity_id == EntityMaster.entity_id, isouter=True) \
+         .filter((Users.obsolete_current != "O") | (Users.obsolete_current.is_(None))) \
+         .all()
 
-        entity_id = user_data.get('entity_id')
-        if not entity_id:
-            return jsonify({"error": "Entity ID not found"}), 400
-
-        # Rest of your existing task summary logic from entity_dashboard.py
-        # But using the entity_id from session instead of hardcoding
-        # ...
+        users_list = [
+            {
+                "user_id": user.user_id,
+                "entity_id": user.entity_id,
+                "entity_name": user.entity_name if user.entity_name else "Not Assigned",
+                "user_name": user.user_name,
+                "address": user.address,
+                "mobile_no": user.mobile_no,
+                "email_id": user.email_id,
+                "role": user.role
+            }
+            for user in users
+        ]
+        return jsonify({"success": True, "users": users_list}), 200
 
     except Exception as e:
-        print(f"Error in get_task_summary: {str(e)}")
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
 
-# Add other necessary routes from entity_dashboard.py 
+@analysis_bp.route('/analysis')
+def analysis_page():
+    """
+    Serve the analysis HTML page
+    """
+    # Return JSON response for the API
+    return jsonify({
+        'success': True,
+        'message': 'Analysis API is working'
+    }) 

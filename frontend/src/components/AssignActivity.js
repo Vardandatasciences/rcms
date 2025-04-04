@@ -18,8 +18,77 @@ const AssignActivity = () => {
   const [selectedReviewUser, setSelectedReviewUser] = useState('');
   const [dueDate, setDueDate] = useState('');
 
+<<<<<<< HEAD
   // Move fetchData inside useCallback to memoize it
   const fetchData = useCallback(async (entityId) => {
+=======
+  useEffect(() => {
+    console.log("AssignActivity component mounted");
+    console.log("Params:", { regulationId, activityId });
+    
+    // Check if user is logged in
+    const storedUserData = sessionStorage.getItem('user');
+    if (!storedUserData) {
+      console.error("No user data found in session storage");
+      navigate('/login');
+      return;
+    }
+
+    try {
+      // Parse user data
+      const parsedUserData = JSON.parse(storedUserData);
+      console.log("Session user data:", parsedUserData);
+      
+      // Check user role - prevent Global users from accessing this page
+      const userRole = parsedUserData.role || "";
+      if (userRole !== "Admin") {
+        console.error("Unauthorized access attempt by non-Admin user");
+        setError("Only Admin users can assign activities.");
+        setLoading(false);
+        return;
+      }
+      
+      setUserData(parsedUserData);
+      
+      // Get entity_id - check all possible locations in the user data structure
+      let entityId = null;
+      
+      // Check for different possible property names for entity_id
+      if (parsedUserData.entity_id) {
+        entityId = parsedUserData.entity_id;
+      } else if (parsedUserData.entityId) {
+        entityId = parsedUserData.entityId;
+      } else if (parsedUserData.entityid) {
+        entityId = parsedUserData.entityid;
+      } else if (parsedUserData.entId) {
+        entityId = parsedUserData.entId;
+      } else if (parsedUserData.entityID) {
+        entityId = parsedUserData.entityID;
+      } else if (parsedUserData.entityId) {
+        entityId = parsedUserData.entityId;
+      }
+      
+      if (!entityId) {
+        // Log the entire user data to see its structure
+        console.error("Could not find entity_id in user data. User data structure:", parsedUserData);
+        setError("User entity information is missing. Please log in again.");
+        setLoading(false);
+        return;
+      }
+      
+      console.log("Using entity_id:", entityId);
+      
+      // Fetch data with the validated entity_id
+      fetchData(entityId);
+    } catch (err) {
+      console.error("Error parsing user data:", err);
+      setError("Invalid user session. Please log in again.");
+      setLoading(false);
+    }
+  }, [navigate, regulationId, activityId]);
+
+  const fetchData = async (entityId) => {
+>>>>>>> main
     try {
       setLoading(true);
       

@@ -101,7 +101,8 @@ const ProtectedRoute = ({ element, allowedRoles, requiredPrivilege }) => {
     return <div>Loading...</div>;
   }
   
-  if (!hasAccess) {
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    // User doesn't have the required role, redirect to home
     return <Navigate to="/" />;
   }
   
@@ -118,7 +119,6 @@ function App() {
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Home />} />
-            <Route path="/dashboard" element={<Dashboard />} />
 
             {/* User Routes */}
             <Route path="/users" element={<Users />} />
@@ -130,6 +130,7 @@ function App() {
                   requiredPrivilege="user_add"
                 />
               }
+              allowedRoles={['Global', 'Admin']} 
             />
             <Route 
               path="/edit-user/:userId" 
@@ -139,6 +140,7 @@ function App() {
                   requiredPrivilege="user_update"
                 />
               }
+              allowedRoles={['Global', 'Admin']} 
             />
             <Route 
               path="/delete-user/:userId" 
@@ -148,6 +150,7 @@ function App() {
                   requiredPrivilege="user_delete"
                 />
               }
+              allowedRoles={['Global', 'Admin']} 
             />
 
             {/* Category Routes */}
@@ -160,6 +163,7 @@ function App() {
                   requiredPrivilege="category_add"
                 />
               }
+              allowedRoles={['Global','Admin']} 
             />
             <Route 
               path="/delete-category/:categoryId" 
@@ -169,6 +173,7 @@ function App() {
                   requiredPrivilege="category_delete"
                 />
               }
+              allowedRoles={['Global','Admin']} 
             />
 
             {/* Regulation Routes */}
@@ -181,6 +186,7 @@ function App() {
                   requiredPrivilege="regulation_add"
                 />
               }
+              allowedRoles={['Global','Admin']} 
             />
             <Route 
               path="/edit-regulation/:regulationId" 
@@ -190,6 +196,7 @@ function App() {
                   requiredPrivilege="regulation_update"
                 />
               }
+              allowedRoles={['Global','Admin']} 
             />
             <Route 
               path="/delete-regulation/:regulationId" 
@@ -199,6 +206,7 @@ function App() {
                   requiredPrivilege="regulation_delete"
                 />
               }
+              allowedRoles={['Global','Admin']} 
             />
 
             {/* Activity Routes */}
@@ -211,6 +219,7 @@ function App() {
                   requiredPrivilege="activity_add"
                 />
               }
+              allowedRoles={['Global','Admin']} 
             />
             <Route 
               path="/edit-activity/:activityId" 
@@ -220,6 +229,7 @@ function App() {
                   requiredPrivilege="activity_update"
                 />
               }
+              allowedRoles={['Global','Admin']} 
             />
             <Route 
               path="/assign-activity/:activityId" 
@@ -229,6 +239,7 @@ function App() {
                   requiredPrivilege="activity_assign"
                 />
               }
+              allowedRoles={['Admin']} 
             />
 
             {/* Task Routes */}
@@ -241,8 +252,9 @@ function App() {
                   requiredPrivilege="task_reassign"
                 />
               }
+              allowedRoles={['Admin']} 
             />
-            <Route path="/user-tasks" element={<UserTask />} />
+            <Route path="/user-tasks" element={<UserTask />} allowedRoles={['User']}  />
 
             {/* Holiday Routes */}
             <Route path="/holidays" element={<Holidays />} />
@@ -254,6 +266,7 @@ function App() {
                   requiredPrivilege="holiday_add"
                 />
               }
+              allowedRoles={['Global', 'Admin']} 
             />
 
             {/* Analysis Route */}
@@ -265,12 +278,14 @@ function App() {
                   requiredPrivilege="analysis_access"
                 />
               }
+              allowedRoles={['Global', 'Admin', 'User']} 
             />
 
-            {/* Entity-specific routes */}
+            Entity-specific routes
             <Route 
               path="/entities/:entityId/users" 
-              element={<Users />}
+              element={<Users />} 
+              allowedRoles={['Global']} 
             />
 
             <Route 
@@ -279,7 +294,7 @@ function App() {
             />
 
             {/* Catch-all route for 404 */}
-            <Route path="*" element={<Navigate to="/" />} />
+            <Route path="*" element={<Navigate to="/" />} allowedRoles={['Global', 'Admin', 'User']}  />
           </Routes>
         </div>
       </Router>

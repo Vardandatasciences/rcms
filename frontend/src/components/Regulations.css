@@ -522,67 +522,224 @@ body {
 
 /* Table Container Styles */
 .regulations-table-container {
+  width: 100%;
+  overflow-x: auto;
   background-color: white;
-  border-radius: var(--border-radius-xl);
-  box-shadow: var(--shadow-md);
-  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin-bottom: 2rem;
-  animation: slideInFromBottom 0.8s ease-out 0.6s forwards;
-  opacity: 0;
 }
 
 /* Table Styles */
 .regulations-table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 0.95rem;
 }
 
 .regulations-table th {
-  padding: 1rem 1.5rem;
-  text-align: left;
+  background-color: #343a40;
+  color: white;
   font-weight: 600;
-  color: var(--gray-700);
-  background-color: var(--gray-50);
-  border-bottom: 1px solid var(--gray-200);
-  position: relative;
-  cursor: pointer;
-  transition: all var(--transition-fast);
+  text-align: left;
+  padding: 14px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
-.regulations-table th:hover {
-  color: var(--primary-color);
+.regulations-table th.select-column {
+  width: 80px;
 }
 
 .regulations-table td {
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--gray-100);
-  color: var(--gray-800);
+  padding: 12px 16px;
+  border-bottom: 1px solid #e9ecef;
+  vertical-align: middle;
 }
 
-.regulations-table tr:last-child td {
-  border-bottom: none;
+.regulations-table tbody tr {
+  transition: background-color 0.2s;
 }
 
-.regulations-table tr {
-  transition: all var(--transition-fast);
-  animation: fadeIn 0.5s ease-out forwards;
+.regulations-table tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.regulations-table td.regulation-name {
+  font-weight: 500;
+  max-width: 300px;
+}
+
+/* Selected row styling */
+.regulations-table tbody tr.selected-row {
+  background-color: rgba(58, 90, 64, 0.05);
+}
+
+.regulations-table tbody tr.selected-row:hover {
+  background-color: rgba(58, 90, 64, 0.08);
+}
+
+/* Checkbox styling */
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding-left: 28px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-container input {
+  position: absolute;
   opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
 }
 
-.regulations-table tr:hover {
-  background-color: var(--gray-50);
+.checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 20px;
+  width: 20px;
+  background-color: #fff;
+  border: 2px solid #ddd;
+  border-radius: 3px;
 }
 
-/* Internal/External badges */
+.checkbox-container:hover input ~ .checkmark {
+  border-color: #3A5A40;
+}
+
+.checkbox-container input:checked ~ .checkmark {
+  background-color: #3A5A40;
+  border-color: #3A5A40;
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+.checkbox-container input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.checkbox-container .checkmark:after {
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Already associated text */
+.already-associated {
+  font-size: 0.75rem;
+  color: #6c757d;
+  margin-left: 8px;
+  font-style: italic;
+}
+
+/* Improved status badges */
 .status-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.375rem 0.75rem;
-  border-radius: var(--border-radius-full);
-  font-size: 0.75rem;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
   font-weight: 600;
+  min-width: 80px;
+  text-align: center;
 }
 
+/* Manage regulations header */
+.manage-regulations-header {
+  margin-bottom: 2rem;
+}
+
+.manage-regulations-header h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #343a40;
+}
+
+.manage-regulations-header p {
+  color: #6c757d;
+  margin-bottom: 1.5rem;
+}
+
+/* Updated actions section */
+.manage-regulations-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Save and Cancel buttons */
+.btn-save {
+  padding: 10px 20px;
+  background-color: #3A5A40;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.btn-save:hover {
+  background-color: #2d4531;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-cancel {
+  padding: 10px 20px;
+  background-color: #f8f9fa;
+  color: #343a40;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.btn-cancel:hover {
+  background-color: #e9ecef;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Make table responsive */
+@media (max-width: 992px) {
+  .regulations-table {
+    min-width: 900px;
+  }
+  
+  .manage-regulations-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .btn-save, 
+  .btn-cancel {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Internal/External badges */
 .status-internal {
   background-color: var(--info-bg);
   color: var(--info-color);
@@ -1239,6 +1396,8 @@ body {
   -webkit-overflow-scrolling: touch;
   animation: slideInFromTop 0.8s ease-out 0.3s forwards;
   opacity: 0;
+  align-items: center;
+  flex-wrap: nowrap;
 }
 
 .filter-tabs::-webkit-scrollbar {
@@ -1310,6 +1469,82 @@ body {
 
 .filter-tab-icon {
   font-size: 1rem;
+}
+
+/* Style for the action buttons container inside filter tabs */
+.filter-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Update action buttons to match filter tabs styling */
+.action-btn {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1.25rem;
+  border-radius: var(--border-radius-full);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* Style "Add New Regulation" button */
+.btn-add.action-btn {
+  background-color: #3A5A40;
+  color: white;
+  border: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-add.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  background-color: #344E3A;
+}
+
+/* Style "Manage Regulations" button */
+.btn-manage.action-btn {
+  background-color: #17a2b8;
+  color: white;
+  border: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-manage.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  background-color: #138496;
+}
+
+/* Make sure the filter tabs don't overflow on smaller screens */
+@media (max-width: 1200px) {
+  .filter-tabs {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    padding-bottom: 1rem;
+  }
+}
+
+/* On very small screens, ensure buttons remain visible */
+@media (max-width: 768px) {
+  .filter-tabs {
+    justify-content: flex-start;
+    padding-right: 1rem;
+  }
+  
+  .filter-actions {
+    position: sticky;
+    right: 0;
+    background: linear-gradient(to right, transparent, var(--gray-50) 20%);
+    padding-left: 1.5rem;
+  }
 }
 
 /* No results state */
@@ -1449,5 +1684,113 @@ body {
 
 .regulations-container .regulation-card:hover {
   border-color: #3A5A40;
+}
+
+/* Additional styles for manage regulations feature */
+
+.btn-manage {
+  margin-left: 10px;
+  padding: 8px 15px;
+  background-color: #17a2b8;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  transition: background-color 0.3s;
+}
+
+.btn-manage:hover {
+  background-color: #138496;
+}
+
+.btn-save {
+  padding: 10px 20px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  transition: background-color 0.3s;
+}
+
+.btn-save:hover {
+  background-color: #218838;
+}
+
+.manage-regulations-actions {
+  margin: 20px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 5px;
+  border-left: 4px solid #17a2b8;
+}
+
+.manage-regulations-actions p {
+  margin: 0;
+  font-weight: 500;
+}
+
+.regulations-table-container {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+.regulations-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.regulations-table th,
+.regulations-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.regulations-table th {
+  background-color: #343a40;
+  color: white;
+  font-weight: 500;
+}
+
+.regulations-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.already-associated {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-left: 5px;
+  font-style: italic;
+}
+
+.success-message {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+  padding: 12px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.success-message::before {
+  content: "✓";
+  font-weight: bold;
+  margin-right: 10px;
+  font-size: 1.2rem;
 }
   

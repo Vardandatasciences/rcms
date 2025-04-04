@@ -30,10 +30,10 @@ const Navbar = () => {
   }, [navigate, location]);
 
   const handleLogout = () => {
-    // Clear session storage
-    sessionStorage.removeItem('user');
-    // Redirect to login
-    navigate('/login');
+    // Clear all session data
+    sessionStorage.clear();
+    // Redirect to login page
+    navigate("/login");
   };
 
   const toggleMenu = () => {
@@ -58,11 +58,34 @@ const Navbar = () => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
+  // Find the tasks navigation item and update it to conditionally redirect
+  const handleTasksClick = (e) => {
+    e.preventDefault();
+    const userData = JSON.parse(sessionStorage.getItem("user"));
+    
+    if (userData) {
+      if (userData.role === "User") {
+        navigate("/user-tasks"); // Redirect to UserTask.js
+      } else {
+        // Admin, Global and other roles
+        navigate("/tasks"); // Redirect to Tasks.js
+      }
+    } else {
+      navigate("/login"); // Redirect to login if no user data
+    }
+  };
+
+  const handleAnalysisClick = (e) => {
+    e.preventDefault();
+    // Open the analysis.html file in a new tab/window
+    window.open('/global_admin.html', '_blank');
+  };
+
   return (
     <nav className="navbar">
       <div className="navbar-container">
         <div className="navbar-brand">
-          <Link to="/dashboard" className="brand-link">
+          <Link to="/" className="brand-link">
             <div className="logo-icon">RC</div>
             <span className="brand-text">RCMS</span>
           </Link>
@@ -74,14 +97,6 @@ const Navbar = () => {
 
         <div className={`navbar-collapse ${isOpen ? 'show' : ''}`}>
           <ul className="navbar-nav">
-            <li className="nav-item">
-              <Link to="/dashboard" className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}>
-                <FaHome className="nav-icon" />
-                <span className="nav-text">Dashboard</span>
-                {isActive('/dashboard') && <div className="nav-indicator"></div>}
-              </Link>
-            </li>
-
             {/* Entities - Only visible to Global role */}
             {user.role === 'Global' && (
               <li className="nav-item">
@@ -137,28 +152,31 @@ const Navbar = () => {
               </li>
             )}
 
-            {/* Tasks - Visible to all roles */}
+            {/* Activities - Visible to all roles */}
             <li className="nav-item">
-              <Link to="/tasks" className={`nav-link ${isActive('/tasks') ? 'active' : ''}`}>
+              <a 
+                className="nav-link" 
+                href="#" 
+                onClick={handleTasksClick}
+              >
                 <FaTasks className="nav-icon" />
                 <span className="nav-text">Tasks</span>
                 {isActive('/tasks') && <div className="nav-indicator"></div>}
-              </Link>
+              </a>
             </li>
 
-            {/* Analysis - Only visible to Admin role */}
-            {user.role === 'Admin' && (
-              <li className="nav-item">
-                <Link 
-                  to="/analysis"
-                  className={`nav-link ${isActive('/analysis') ? 'active' : ''}`}
-                >
-                  <FaChartLine className="nav-icon" />
-                  <span className="nav-text">Analysis</span>
-                  {isActive('/analysis') && <div className="nav-indicator"></div>}
-                </Link>
-              </li>
-            )}
+            {/* Analysis - Visible to all roles */}
+            <li className="nav-item">
+              <a 
+                href="#" 
+                className={`nav-link ${isActive('/analysis') ? 'active' : ''}`}
+                onClick={handleAnalysisClick}
+              >
+                <FaChartLine className="nav-icon" />
+                <span className="nav-text">Analysis</span>
+                {isActive('/analysis') && <div className="nav-indicator"></div>}
+              </a>
+            </li>
 
             {/* Holidays - Only visible to Admin role */}
             {user.role === 'Admin' && (
