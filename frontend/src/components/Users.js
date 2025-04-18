@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
@@ -7,14 +7,16 @@ import "./Users.css"; // Import CSS for styling
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUserPlus, faEdit, faTrash, faEnvelope, faIdCard,
-  faBuilding, faUserTag, faUserEdit, faSave, faTimes,
-  faSpinner, faShieldAlt, faCheck, faLock, faCog, faList,
-  faFileAlt, faClipboardList, faTasks, faCalendarAlt,
+  faBuilding, faUserTag, faUserEdit, faTimes,
+  faSpinner, faShieldAlt, faKey, faRandom,
   faChartLine, faUserCog, faTrashAlt, faExchangeAlt, faPlus,
-  faFileUpload, faListAlt, faClipboardCheck, faTools, faRandom,
-  faGlobe, faUniversalAccess, faInfo, faKey
+  faFileUpload, faFileAlt, faClipboardCheck, faCalendarAlt
 } from '@fortawesome/free-solid-svg-icons';
-import PrivilegedButton from "./PrivilegedButton"; // Import the PrivilegedButton component
+import { PrivilegedButton } from "./Privileges"; // Import the PrivilegedButton component
+import { FaTrashAlt, FaEdit, FaPlus } from "react-icons/fa";
+ 
+// API base URL constant
+const API_BASE_URL = "http://localhost:5000";
  
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -28,8 +30,8 @@ const Users = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUserData, setCurrentUserData] = useState(null);
-  // Added state for available privileges
-  const [availablePrivileges, setAvailablePrivileges] = useState([
+  // Available privileges state - memoized to prevent recreation on rerenders
+  const availablePrivileges = useMemo(() => [
     // User privileges
     { id: "user_add", name: "Add Users", icon: faUserPlus },
     { id: "user_update", name: "Update/Modify Users", icon: faUserCog },
@@ -60,7 +62,7 @@ const Users = () => {
     
     // Analysis privilege
     { id: "analysis_access", name: "Access Analysis", icon: faChartLine },
-  ]);
+  ], []);
   const [userRole, setUserRole] = useState(null); // Added for role-based filtering
   const [userEntityId, setUserEntityId] = useState(null); // Added for entity-based filtering
   const [newUser, setNewUser] = useState({
@@ -87,6 +89,9 @@ const Users = () => {
     try {
       // Parse user data
       const parsedUserData = JSON.parse(userData);
+      
+      // Store current user data
+      setCurrentUserData(parsedUserData);
      
       // Get user role and entity ID
       const role = parsedUserData.role || "";
@@ -111,11 +116,10 @@ const Users = () => {
      
       // Fetch data based on user role and entity ID
       Promise.all([fetchUsers(role, entityId), fetchEntities()]).catch(err => {
-        console.error("Error in initial data loading:", err);
+        setError("Error in initial data loading. Please try again.");
         setLoading(false);
       });
     } catch (err) {
-      console.error("Error parsing user data:", err);
       setError("Invalid user session. Please log in again.");
       setLoading(false);
     }
@@ -126,23 +130,17 @@ const Users = () => {
       setLoading(true);
       let response;
  
-      console.log("Fetching users for role: " + role + " and entityId: " + entityId);
-     
       // For Admin users, fetch only users for their entity
       if (role === "Global") {
-        console.log("Fetching all users for Global user");
-        response = await axios.get("http://localhost:5000/users");
+        response = await axios.get(`${API_BASE_URL}/users`);
       } else {
-        // For Global users, fetch all users
-       
-        console.log(`Fetching users for entity: ${entityId}`);
-        response = await axios.get(`http://localhost:5000/entity_users_admin/${entityId}`);
+        // For entity admins, fetch users for their entity
+        response = await axios.get(`${API_BASE_URL}/entity_users_admin/${entityId}`);
       }
      
       setUsers(response.data.users || []);
       return response.data.users;
     } catch (err) {
-      console.error("Error fetching users:", err);
       setError("Failed to fetch users. Please try again later.");
       throw err;
     } finally {
@@ -152,12 +150,12 @@ const Users = () => {
  
   const fetchEntities = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/entities");
+      const response = await axios.get(`${API_BASE_URL}/entities`);
       setEntities(response.data.entities || []);
       setLoading(false);
       return response.data.entities;
     } catch (err) {
-      console.error("Error fetching entities:", err);
+      setError("Failed to fetch entities. Please try again later.");
       setLoading(false);
       throw err;
     }
@@ -285,12 +283,6 @@ const Users = () => {
     return currentUserData ? currentUserData.entity_id : null;
   };
 
-  // Logic to determine if entity field should be disabled
-  const shouldDisableEntityField = () => {
-    // Disable for entity admins, enable for global admins
-    return isEntityAdmin();
-  };
-
   // Pre-set entity ID for entity admins
   useEffect(() => {
     if (isEntityAdmin() && getCurrentUserEntity() && showAddForm) {
@@ -331,37 +323,32 @@ const Users = () => {
         return;
       }
       
-      // Extract privileges from the user data
-      const { privileges, ...userData } = newUser;
-      
-      console.log('Adding user with data:', userData);
-      
-      // Step 1: Add user without privileges
-      const response = await axios.post("http://localhost:5000/add_user", userData);
-      console.log('User added response:', response.data);
-      
-      // Step 2: If user is Admin and has privileges, add privileges separately
-      if (userData.role === "Admin" && privileges.length > 0) {
-        try {
-          console.log('Adding privileges for user:', userData.user_id, privileges);
-          const privResponse = await axios.post("http://localhost:5000/add_user_privileges", {
-            user_id: userData.user_id,
-            entity_id: userData.entity_id,
-            privileges: privileges
-          });
-          console.log('Privileges added response:', privResponse.data);
-        } catch (privilegeError) {
-          console.error("Error adding privileges:", privilegeError);
-          const errorMsg = privilegeError.response?.data?.message || privilegeError.message;
-          console.error(`Detailed privilege error: ${errorMsg}`);
-          
-          // We don't want to fail the entire operation if just privileges fail
-          setSuccessMessage("User added successfully, but there was an issue setting privileges.");
-        }
+      // Validate email format
+      if (!newUser.email_id || !newUser.email_id.includes('@')) {
+        setErrorMessage("Please provide a valid email address");
+        setIsSubmitting(false);
+        return;
       }
       
-      setSuccessMessage(response.data.message || "User added successfully");
-     
+      // Extract privileges from the user data, ensuring it's an array
+      const { privileges = [], ...userData } = newUser;
+      
+      // Send user data along with privileges to the server
+      const response = await axios.post(`${API_BASE_URL}/add_user`, {
+        ...userData,
+        privileges: Array.isArray(privileges) ? privileges : []
+      });
+      
+      // Check if email was sent successfully
+      if (response.data.email_sent === false) {
+        setSuccessMessage(
+          `User added successfully, but the welcome email could not be sent to ${newUser.email_id}. ` +
+          `Please verify the email address and inform the user of their account details manually.`
+        );
+      } else {
+        setSuccessMessage(response.data.message || "User added successfully");
+      }
+      
       // Reset form and refresh users list
       setNewUser({
         user_id: "",
@@ -379,18 +366,21 @@ const Users = () => {
       setTimeout(() => {
         setShowAddForm(false);
         setSuccessMessage("");
-        fetchUsers();
-      }, 2000);
+        fetchUsers(userRole, userEntityId);
+      }, 3000); // Increased to 3 seconds so user can read the message
     } catch (error) {
-      console.error("Full error object:", error);
       let errorMessage = "Error adding user. Please try again.";
       
       if (error.response) {
-        console.error("Error response data:", error.response.data);
         if (error.response.status === 409) {
           errorMessage = "User ID already exists. Please enter a unique User ID or use the generate button.";
         } else if (error.response.data && error.response.data.message) {
           errorMessage = cleanErrorMessage(error.response.data.message);
+        }
+        
+        // Check if user was created but email failed
+        if (error.response.data && error.response.data.user_created && error.response.data.email_sent === false) {
+          errorMessage += " User was created, but the welcome email could not be sent.";
         }
       }
       
@@ -404,27 +394,20 @@ const Users = () => {
     // Load user privileges if they exist
     const fetchUserPrivileges = async () => {
       try {
-        console.log(`Fetching privileges for user: ${user.user_id}`);
         // You may need to adjust this endpoint based on your API
-        const response = await axios.get(`http://localhost:5000/user_privileges/${user.user_id}`);
+        const response = await axios.get(`${API_BASE_URL}/user_privileges/${user.user_id}`);
         
         if (response.data && response.data.success) {
           const userWithPrivileges = {
             ...user,
             privileges: response.data.privileges || []
           };
-          console.log('User privileges loaded:', response.data.privileges);
           setCurrentUser(userWithPrivileges);
         } else {
-          console.warn('No privileges found or invalid response structure:', response.data);
+          // No privileges or invalid response - set empty privileges
           setCurrentUser({...user, privileges: []});
         }
       } catch (error) {
-        console.error("Error fetching user privileges:", error);
-        // Try to extract the error message from the response if available
-        const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
-        console.error(`Detailed error: ${errorMsg}`);
-        
         // If there's an error, still set the user but with empty privileges
         setCurrentUser({...user, privileges: []});
       }
@@ -436,8 +419,8 @@ const Users = () => {
     fetchUserPrivileges()
       .finally(() => {
         setLoading(false);
-    setShowEditForm(true);
-    setShowAddForm(false);
+        setShowEditForm(true);
+        setShowAddForm(false);
       });
   };
  
@@ -458,27 +441,24 @@ const Users = () => {
       }
       
       // Extract privileges from the user data to avoid sending it directly to the Users table
-      const { privileges, ...userData } = currentUser;
+      const { privileges = [], ...userData } = currentUser;
       
       // Step 1: Update user without privileges
-      const response = await axios.put(`http://localhost:5000/update_user/${userData.user_id}`, userData);
+      const response = await axios.put(`${API_BASE_URL}/update_user/${userData.user_id}`, userData);
       
-      // Step 2: If user is Admin, update privileges separately
-      if (userData.role === "Admin") {
-        try {
-          await axios.post(`http://localhost:5000/update_user_privileges`, {
-            user_id: userData.user_id,
-            entity_id: userData.entity_id,
-            privileges: privileges || []
-          });
-        } catch (privilegeError) {
-          console.error("Error updating privileges:", privilegeError);
-          // We don't want to fail the entire operation if just privileges fail
-          setSuccessMessage("User updated successfully, but there was an issue updating privileges.");
-        }
+      // Step 2: Update privileges separately for all users
+      try {
+        await axios.post(`${API_BASE_URL}/update_user_privileges`, {
+          user_id: userData.user_id,
+          entity_id: userData.entity_id,
+          privileges: Array.isArray(privileges) ? privileges : []
+        });
+      } catch (privilegeError) {
+        // We don't want to fail the entire operation if just privileges fail
+        setSuccessMessage("User updated successfully, but there was an issue updating privileges.");
       }
       
-      setSuccessMessage(response.data.message);
+      setSuccessMessage(response.data.message || "User updated successfully");
      
       // Close the form after a short delay
       setTimeout(() => {
@@ -490,7 +470,6 @@ const Users = () => {
       }, 2000);
     } catch (error) {
       setErrorMessage("Error updating user. Please try again.");
-      console.error("Error updating user:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -499,11 +478,10 @@ const Users = () => {
   const handleDeleteUser = async (userId) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
       try {
-        await axios.delete(`http://localhost:5000/delete_user/${userId}`);
+        await axios.delete(`${API_BASE_URL}/delete_user/${userId}`);
         // Refresh the users list
         fetchUsers(userRole, userEntityId);
       } catch (err) {
-        console.error("Error deleting user:", err);
         setError("Failed to delete user. Please try again later.");
       }
     }
@@ -544,7 +522,7 @@ const Users = () => {
   };
 
   // Helper function to group privileges by category
-  const groupPrivilegesByCategory = () => {
+  const groupPrivilegesByCategory = useMemo(() => {
     const groups = {};
     availablePrivileges.forEach(privilege => {
       const category = privilege.id.split('_')[0];
@@ -554,29 +532,20 @@ const Users = () => {
       groups[category].push(privilege);
     });
     return groups;
-  };
+  }, [availablePrivileges]);
  
   return (
     <div className="users-container">
       <Navbar />
       <div className="users-content">
-        {/* <h1>Users Management</h1>
-        <p>
-          {userRole === "Admin"
-            ? "View and manage users for your entity"
-            : "View and manage all system users"}
-        </p> */}
         <div className="users-actions">
           <PrivilegedButton 
-            requiredPrivilege="user_add" 
-            className="btn-add-user" 
+            className="btn-add" 
             onClick={toggleAddForm}
+            requiredPrivilege="user_add"
+            title="add a new user"
           >
-            {showAddForm ? (
-              <><FontAwesomeIcon icon={faTimes} /> Cancel</>
-            ) : (
-              <><FontAwesomeIcon icon={faUserPlus} /> Add New User</>
-            )}
+            {showAddForm ? "Cancel" : <><FaPlus /> Add User</>}
           </PrivilegedButton>
         </div>
  
@@ -626,7 +595,6 @@ const Users = () => {
                     required
                     disabled={isEntityAdmin()}
                     className={isEntityAdmin() ? "disabled-select" : ""}
-                    disabled={userRole === "Admin"} // Disable for Admin users
                   >
                     <option value="">Select Entity</option>
                     {entities.map((entity) => (
@@ -755,7 +723,7 @@ const Users = () => {
                   </div>
                   
                   <div className="privileges-list">
-                    {Object.entries(groupPrivilegesByCategory()).map(([category, privileges]) => (
+                    {Object.entries(groupPrivilegesByCategory).map(([category, privileges]) => (
                       <div key={category} className="privilege-category">
                         <h4 className="category-name">{category.charAt(0).toUpperCase() + category.slice(1)}</h4>
                         <div className="category-privileges">
@@ -785,15 +753,11 @@ const Users = () => {
               <div className="form-actions">
                 <PrivilegedButton 
                   type="submit" 
-                  className="btn-submit" 
-                  disabled={isSubmitting}
+                  className="btn-submit"
                   requiredPrivilege="user_add"
+                  title="add this user"
                 >
-                  {isSubmitting ? (
-                    <><FontAwesomeIcon icon={faSpinner} className="spinner" /> Saving...</>
-                  ) : (
-                    <><FontAwesomeIcon icon={faSave} /> Save User</>
-                  )}
+                  Add User
                 </PrivilegedButton>
                 <button type="button" className="btn-cancel" onClick={toggleAddForm}>
                   <FontAwesomeIcon icon={faTimes} /> Cancel
@@ -829,7 +793,6 @@ const Users = () => {
                     required
                     disabled={isEntityAdmin()}
                     className={isEntityAdmin() ? "disabled-select" : ""}
-                    disabled={userRole === "Admin"} // Disable for Admin users
                   >
                     {entities.map((entity) => (
                       <option key={entity.entity_id} value={entity.entity_id}>
@@ -903,7 +866,6 @@ const Users = () => {
                     {isGlobalAdmin() && <option value="Global">Global Admin</option>}
                     <option value="Admin">Entity Admin</option>
                     <option value="User">User</option>
-               
                   </select>
                 </div>
               </div>
@@ -935,7 +897,7 @@ const Users = () => {
                   </div>
                   
                   <div className="privileges-list">
-                    {Object.entries(groupPrivilegesByCategory()).map(([category, privileges]) => (
+                    {Object.entries(groupPrivilegesByCategory).map(([category, privileges]) => (
                       <div key={category} className="privilege-category">
                         <h4 className="category-name">{category.charAt(0).toUpperCase() + category.slice(1)}</h4>
                         <div className="category-privileges">
@@ -966,15 +928,10 @@ const Users = () => {
                 <PrivilegedButton 
                   type="submit" 
                   className="btn-submit"
-                  disabled={isSubmitting}
                   requiredPrivilege="user_update"
-                  entityId={currentUser?.entity_id}
+                  title="update this user"
                 >
-                  {isSubmitting ? (
-                    <><FontAwesomeIcon icon={faSpinner} className="spinner" /> Updating...</>
-                  ) : (
-                    <><FontAwesomeIcon icon={faSave} /> Update User</>
-                  )}
+                  Update User
                 </PrivilegedButton>
                 <button type="button" className="btn-cancel" onClick={cancelEdit}>
                   <FontAwesomeIcon icon={faTimes} /> Cancel
@@ -1042,20 +999,18 @@ const Users = () => {
                       <PrivilegedButton
                         className="btn-edit"
                         onClick={() => handleEditUser(user)}
-                        title="Edit user"
                         requiredPrivilege="user_update"
-                        entityId={user.entity_id}
+                        title="edit this user"
                       >
-                        <FontAwesomeIcon icon={faEdit} />
+                        <FaEdit />
                       </PrivilegedButton>
                       <PrivilegedButton
                         className="btn-delete"
                         onClick={() => handleDeleteUser(user.user_id)}
-                        title="Delete user"
                         requiredPrivilege="user_delete"
-                        entityId={user.entity_id}
+                        title="delete this user"
                       >
-                        <FontAwesomeIcon icon={faTrash} />
+                        <FaTrashAlt />
                       </PrivilegedButton>
                     </div>
                   </div>

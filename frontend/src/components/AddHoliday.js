@@ -1,75 +1,136 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import "./AddHoliday.css"; // Import styles
+import { useNavigate } from "react-router-dom";
+import Navbar from "./Navbar";
+import "./Holidays.css";
 
-const AddHoliday = ({ onClose, onHolidayAdded }) => {
-  const [entities, setEntities] = useState([]);
-  const [holidayData, setHolidayData] = useState({
+const AddHoliday = () => {
+  const [newHoliday, setNewHoliday] = useState({
     holiday_date: "",
     description: "",
     entity_id: "",
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+  const [currentEntity, setCurrentEntity] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchEntities();
-  }, []);
-
-  // Fetch entities for the dropdown
-  const fetchEntities = () => {
-    axios
-      .get("http://localhost:5000/entities") // Fetch from existing API
-      .then((response) => setEntities(response.data.entities))
-      .catch((error) => console.error("Error fetching entities:", error));
-  };
-
-  // Handle form input changes
-  const handleChange = (e) => {
-    setHolidayData({ ...holidayData, [e.target.name]: e.target.value });
-  };
-
-  // Submit the form to add a holiday
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!holidayData.entity_id) {
-      alert("Please select an entity.");
+    // Check if user is logged in
+    const userData = sessionStorage.getItem("user");
+    if (!userData) {
+      navigate("/login");
       return;
     }
 
-    axios
-      .post("http://localhost:5000/add_holiday", holidayData, {
-        headers: { "Content-Type": "application/json" },
-      })
-      .then(() => {
-        onHolidayAdded(); // Refresh holiday list
-        onClose(); // Close the modal
-      })
-      .catch((error) => console.error("Error adding holiday:", error));
+    // Set current entity from user data
+    const user = JSON.parse(userData);
+    setCurrentEntity(user.entity_id);
+    setNewHoliday(prev => ({ ...prev, entity_id: user.entity_id }));
+  }, [navigate]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewHoliday({ ...newHoliday, [name]: value });
+  };
+
+  const handleAddHoliday = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    if (!newHoliday.holiday_date || !newHoliday.description) {
+      setError("All fields are required");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await axios.post("http://localhost:5000/add_holiday", newHoliday);
+      
+      if (response.status === 201) {
+        setSuccess(true);
+        setNewHoliday({ 
+          holiday_date: "", 
+          description: "", 
+          entity_id: currentEntity 
+        });
+        
+        // Redirect to holidays list after successful addition
+        setTimeout(() => {
+          navigate("/holidays");
+        }, 2000);
+      }
+    } catch (err) {
+      console.error("Error adding holiday:", err);
+      setError(err.response?.data?.error || "Failed to add holiday. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <h2>Add Holiday</h2>
-        <form onSubmit={handleSubmit}>
-          <label>Date:</label>
-          <input type="date" name="holiday_date" value={holidayData.holiday_date} onChange={handleChange} required />
+    <div className="holidays-container">
+      <Navbar />
+      <div className="holidays-content">
+        <h1>Add New Holiday</h1>
+        <p>Create a new holiday for your entity</p>
 
-          <label>Description:</label>
-          <input type="text" name="description" value={holidayData.description} onChange={handleChange} required />
+        {success && (
+          <div className="success-message">
+            Holiday added successfully! Redirecting to holidays list...
+          </div>
+        )}
 
-          <label>Entity:</label>
-          <select name="entity_id" value={holidayData.entity_id} onChange={handleChange} required>
-            <option value="">Select Entity</option>
-            {entities.map((entity) => (
-              <option key={entity.entity_id} value={entity.entity_id}>
-                {entity.entity_name} ({entity.location})
-              </option>
-            ))}
-          </select>
+        {error && (
+          <div className="error-message">{error}</div>
+        )}
 
-          <button type="submit" className="save-btn">Save</button>
-          <button type="button" className="cancel-btn" onClick={onClose}>Cancel</button>
-        </form>
+        <div className="add-holiday-form">
+          <form onSubmit={handleAddHoliday}>
+            <div className="form-group">
+              <label htmlFor="holiday_date">Holiday Date*</label>
+              <input
+                type="date"
+                id="holiday_date"
+                name="holiday_date"
+                value={newHoliday.holiday_date}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="description">Description*</label>
+              <input
+                type="text"
+                id="description"
+                name="description"
+                value={newHoliday.description}
+                onChange={handleInputChange}
+                required
+                placeholder="Enter holiday description"
+              />
+            </div>
+            <div className="form-actions">
+              <button 
+                type="button" 
+                className="btn-cancel"
+                onClick={() => navigate("/holidays")}
+              >
+                Cancel
+              </button>
+              <button 
+                type="submit" 
+                className="btn-submit"
+                disabled={loading}
+              >
+                {loading ? "Adding..." : "Add Holiday"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

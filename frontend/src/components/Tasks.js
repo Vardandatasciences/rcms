@@ -3,6 +3,8 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 import "./Tasks.css"; // Import styles
+import { PrivilegedButton } from "./Privileges";
+import { FaTrashAlt, FaEdit, FaRedo } from "react-icons/fa";
 
 const Tasks = () => {
   const [tasks, setTasks] = useState([]);
@@ -454,14 +456,15 @@ const Tasks = () => {
                   {user.role === "Global" ? (
                     <span className="entity-badge">{task.entity_name}</span>
                   ) : (
-                    <button
+                    <PrivilegedButton
                       className={`btn-reassign ${task.status === "Completed" ? "btn-disabled" : ""}`}
                       onClick={() => handleReassignTask(task)}
                       disabled={task.status === "Completed"}
-                      title={task.status === "Completed" ? "Completed tasks cannot be reassigned" : "Reassign this task"}
+                      title={task.status === "Completed" ? "Completed tasks cannot be reassigned" : "reassign this task"}
+                      requiredPrivilege="task_reassign"
                     >
                       Reassign
-                    </button>
+                    </PrivilegedButton>
                   )}
                 </td>
               </tr>
@@ -494,13 +497,15 @@ const Tasks = () => {
                   {task.criticality || "MEDIUM"}
                 </span>
                 {user.role !== "Global" && (
-                  <button
+                  <PrivilegedButton
                     className={`btn-reassign-action-top ${task.status === "Completed" ? "btn-disabled" : ""}`}
                     onClick={() => handleReassignTask(task)}
                     disabled={task.status === "Completed"}
+                    title="reassign this task"
+                    requiredPrivilege="task_reassign"
                   >
                     Reassign
-                  </button>
+                  </PrivilegedButton>
                 )}
                 {user.role === "Global" && !showEntityColumn && (
                   <span className="entity-badge-grid">{task.entity_name}</span>

@@ -9,6 +9,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 import "./Activities.css";
+import { PrivilegedButton, usePrivileges } from "./Privileges";
 
 const Activities = () => {
   const [activities, setActivities] = useState([]);
@@ -34,6 +35,7 @@ const Activities = () => {
   const [assignedActivities, setAssignedActivities] = useState(new Set());
   const filterRef = useRef(null);
   const navigate = useNavigate();
+  const { userPrivileges, userRole: contextUserRole } = usePrivileges();
 
   useEffect(() => {
     // Get user data from session storage
@@ -41,21 +43,29 @@ const Activities = () => {
     if (userData) {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
-<<<<<<< HEAD
-      fetchActivities();
-      fetchAssignedActivities();
-=======
       
-      // Extract user role and entity ID
+      // Set user role and entity ID
       const role = parsedUser.role || "";
-      const entityId = parsedUser.entity_id || parsedUser.entityId || "";
-      
       setUserRole(role);
+      
+      // Get entity_id from user data
+      let entityId = null;
+      if (parsedUser.entity_id) {
+        entityId = parsedUser.entity_id;
+      } else if (parsedUser.entityId) {
+        entityId = parsedUser.entityId;
+      } else if (parsedUser.entityid) {
+        entityId = parsedUser.entityid;
+      } else if (parsedUser.entId) {
+        entityId = parsedUser.entId;
+      } else if (parsedUser.entityID) {
+        entityId = parsedUser.entityID;
+      }
       setUserEntityId(entityId);
       
-      // Fetch activities based on user role
+      // Fetch activities with the role and entityId
       fetchActivities(role, entityId);
->>>>>>> main
+      fetchAssignedActivities();
     } else {
       navigate("/login");
     }
@@ -225,18 +235,6 @@ const Activities = () => {
     }
   };
 
-<<<<<<< HEAD
-  // Update the isAssigned helper function
-  const isAssigned = (regulationId, activityId) => {
-    return assignedActivities.has(`${regulationId}-${activityId}`);
-  };
-
-  // Update the handleAssign function
-  const handleAssign = (regulationId, activityId) => {
-    if (!isAssigned(regulationId, activityId)) {
-      navigate(`/activities/assign/${regulationId}/${activityId}`);
-    }
-=======
   // Refresh activities data
   const refreshActivities = () => {
     fetchActivities(userRole, userEntityId);
@@ -251,17 +249,14 @@ const Activities = () => {
       activityId = activityId.toString();
     }
     
-    // Check userRole again to prevent global users from accessing
+    // Check userRole again to prevent non-admin users from accessing
     if (userRole !== "Admin") {
       setError("Only Admin users can assign activities.");
       return;
     }
     
-    // Explicit navigate with both params
-    const url = `/activities/assign/${regulationId}/${activityId}`;
-    console.log("Navigation URL:", url);
-    navigate(url);
->>>>>>> main
+    // Navigate to the correct path based on the route definition in App.js
+    navigate(`/assign-activity/${regulationId}-${activityId}`);
   };
 
   // Enhanced filter function to handle multiple filter categories
@@ -386,6 +381,11 @@ const Activities = () => {
   // Check if any filter is active
   const isFilterActive = () => {
     return filterCategories.criticality !== "all" || filterCategories.status !== "all";
+  };
+
+  // Handle edit button click
+  const handleEdit = (regulationId, activityId) => {
+    navigate(`/edit-activity/${regulationId}/${activityId}`);
   };
 
   if (!user) return null;
@@ -604,13 +604,14 @@ const Activities = () => {
             </button>
 
             <div className="btn-refresh-2">
-              <button 
-                className="btn-add"
-                onClick={() => navigate("/activities/add")}
+              <PrivilegedButton 
+                className="btn-add" 
+                onClick={() => navigate('/add-activity')}
+                requiredPrivilege="activity_add"
+                title="add new activity"
               >
-                <FaPlus className="btn-icon" />
-                <span>Add New Activity</span>
-              </button>
+                Add Activity
+              </PrivilegedButton>
             </div>
           </div>
         </div>
@@ -669,41 +670,36 @@ const Activities = () => {
                 </div>
                 
                 <div className="card-actions">
-                  <Link
-                    to={`/activities/edit/${activity.regulation_id}/${activity.activity_id}`}
+                  <PrivilegedButton
                     className="btn-action btn-edit"
-                    title="Edit activity"
+                    onClick={() => handleEdit(activity.regulation_id, activity.activity_id)}
+                    requiredPrivilege="activity_update"
+                    title="edit this activity"
                   >
                     <FaEdit />
-                  </Link>
-                  <button
+                  </PrivilegedButton>
+                  
+                  <PrivilegedButton
                     className="btn-action btn-delete"
                     onClick={() => deleteActivity(activity.regulation_id, activity.activity_id)}
-                    title="Delete activity"
+                    requiredPrivilege="activity_delete"
+                    title="delete this activity"
                   >
                     <FaTrashAlt />
-                  </button>
-<<<<<<< HEAD
-                  <button
-                    className={`btn-text-action ${isAssigned(activity.regulation_id, activity.activity_id) ? 'assigned' : ''}`}
-                    onClick={() => handleAssign(activity.regulation_id, activity.activity_id)}
-                    disabled={isAssigned(activity.regulation_id, activity.activity_id)}
-                  >
-                    <FaUserCog style={{ marginRight: '5px' }} />
-                    {isAssigned(activity.regulation_id, activity.activity_id) ? 'Assigned' : 'Assign'}
-                  </button>
-=======
+                  </PrivilegedButton>
                   
-                  {/* Only show Assign button for Admin users */}
+                  {/* Show Assign button for Admin users with proper privilege */}
                   {userRole === "Admin" && (
-                    <button
+                    <PrivilegedButton
                       className="btn-text-action"
                       onClick={() => handleAssign(activity.regulation_id, activity.activity_id)}
+                      requiredPrivilege="activity_assign"
+                      title="assign this activity"
                     >
+                      <FaUserCog style={{ marginRight: '5px' }} />
                       Assign
-                    </button>
+                    </PrivilegedButton>
                   )}
->>>>>>> main
                 </div>
               </div>
             ))}
@@ -771,42 +767,36 @@ const Activities = () => {
                   </div>
                   <div className="list-cell">
                     <div className="list-actions">
-                      <Link
-                        to={`/activities/edit/${activity.regulation_id}/${activity.activity_id}`}
+                      <PrivilegedButton
                         className="btn-action btn-edit"
-                        title="Edit activity"
+                        onClick={() => handleEdit(activity.regulation_id, activity.activity_id)}
+                        requiredPrivilege="activity_update"
+                        title="edit this activity"
                       >
                         <FaEdit size={16} />
-                      </Link>
-                      <button
+                      </PrivilegedButton>
+                      
+                      <PrivilegedButton
                         className="btn-action btn-delete"
                         onClick={() => deleteActivity(activity.regulation_id, activity.activity_id)}
-                        title="Delete activity"
+                        requiredPrivilege="activity_delete"
+                        title="delete this activity"
                       >
                         <FaTrashAlt size={16} />
-                      </button>
-<<<<<<< HEAD
-                      <button
-                        className={`btn-text-action list-btn-text ${isAssigned(activity.regulation_id, activity.activity_id) ? 'assigned' : ''}`}
-                        onClick={() => handleAssign(activity.regulation_id, activity.activity_id)}
-                        disabled={isAssigned(activity.regulation_id, activity.activity_id)}
-                      >
-                        <FaUserCog style={{ marginRight: '5px' }} />
-                        {isAssigned(activity.regulation_id, activity.activity_id) ? 'Assigned' : 'Assign'}
-                      </button>
-=======
+                      </PrivilegedButton>
                       
                       {/* Only show Assign button for Admin users */}
                       {userRole === "Admin" && (
-                        <button
+                        <PrivilegedButton
                           className="btn-text-action list-btn-text"
                           onClick={() => handleAssign(activity.regulation_id, activity.activity_id)}
+                          requiredPrivilege="activity_assign"
+                          title="assign this activity"
                         >
                           <FaUserCog style={{ marginRight: '5px' }} />
                           Assign
-                        </button>
+                        </PrivilegedButton>
                       )}
->>>>>>> main
                     </div>
                   </div>
                 </div>

@@ -1,0 +1,107 @@
+/* Privileges.css */
+
+/* Disabled button styles */
+.disabled-button {
+  opacity: 0.6;
+  cursor: not-allowed;
+  position: relative;
+  pointer-events: auto !important;
+  overflow: visible !important;
+}
+
+/* Custom tooltip for disabled buttons */
+.disabled-button:hover::before {
+  content: "Access Denied";
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background-color: #dc3545;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 3px;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: bold;
+  z-index: 10000;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  pointer-events: none;
+  animation: fadeIn 0.2s ease-in-out;
+  max-width: none;
+  overflow: visible;
+}
+
+/* Remove the arrow from tooltip */
+.disabled-button:hover::after {
+  display: none;
+}
+
+/* Animation for tooltip appearance */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Animation for disabled buttons */
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 0.4; }
+  100% { opacity: 0.6; }
+}
+
+.disabled-button.with-animation {
+  animation: pulse 2s infinite;
+}
+
+/* Custom styles for different button types */
+.disabled-button.btn-primary,
+.disabled-button.btn-add,
+.disabled-button.btn-submit {
+  background-color: #7a9cc6;
+  border-color: #6a8cb6;
+  color: #f5f5f5;
+}
+
+.disabled-button.btn-danger,
+.disabled-button.btn-delete {
+  background-color: #c77a7a;
+  border-color: #b76a6a;
+  color: #f5f5f5;
+}
+
+.disabled-button.btn-warning,
+.disabled-button.btn-edit {
+  background-color: #c7b77a;
+  border-color: #b7a76a;
+  color: #f5f5f5;
+}
+
+/* Style for permitted buttons */
+.permitted-button {
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.permitted-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading container */
+.loading-container,
+.loading-privileges {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100px;
+  font-size: 16px;
+  color: #666;
+}
+
+/* Ensure parent containers don't clip the tooltip */
+.users-container, 
+.users-content, 
+.user-card, 
+.user-card-actions {
+  overflow: visible !important;
+} 

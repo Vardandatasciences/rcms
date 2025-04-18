@@ -1,12 +1,30 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
-import "./Entities.css"; // Import CSS for styling
-import AddEntity from "./AddEntity"; // Import AddEntity component
-import EditEntity from "./EditEntity"; // Import EditEntity component
-import DeleteEntity from "./DeleteEntity"; // Import DeleteEntity component
-import { FaSearch, FaFilter, FaEdit, FaTrashAlt, FaPencilAlt, FaTrash, FaUser, FaPhone, FaUserFriends, FaGlobe, FaMapMarkerAlt } from "react-icons/fa"; // Import icons
+import "./Entities.css";
+import { FaSearch, FaFilter, FaTrashAlt, FaUser, FaPhone, FaUserFriends, FaGlobe, FaMapMarkerAlt } from "react-icons/fa";
+import { PrivilegedButton } from "./Privileges";
+
+// Define API base URL as a constant
+const API_BASE_URL = "http://localhost:5000";
+
+// Initial entity state
+const initialEntityState = {
+  entity_name: "",
+  location: "",
+  contact_phno: "",
+  alternate_contact: "",
+  description: "",
+  country: "India",
+  contact_name: "",
+  alternate_contact_name: "",
+  state: "",
+  pincode: "",
+  admin_email: "",
+  admin_password: "",
+  selected_regulations: []
+};
 
 const Entities = () => {
   const [entities, setEntities] = useState([]);
@@ -18,21 +36,7 @@ const Entities = () => {
   const [currentEntity, setCurrentEntity] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [newEntity, setNewEntity] = useState({
-    entity_name: "",
-    location: "",
-    contact_phno: "",
-    alternate_contact: "",
-    description: "",
-    country: "India",
-    contact_name: "",
-    alternate_contact_name: "",
-    state: "",
-    pincode: "",
-    admin_email: "",
-    admin_password: "",
-    selected_regulations: []
-  });
+  const [newEntity, setNewEntity] = useState({...initialEntityState});
   const [regulations, setRegulations] = useState([]);
   const [countries, setCountries] = useState([]);
   const [loadingRegulations, setLoadingRegulations] = useState(false);
@@ -48,38 +52,47 @@ const Entities = () => {
     state: ""
   });
 
+  // Fetch entities from the API
+  const fetchEntities = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_BASE_URL}/entities`);
+      const entitiesData = response.data.entities || [];
+      setEntities(entitiesData);
+      setFilteredEntities(entitiesData);
+    } catch (err) {
+      setError("Failed to fetch entities. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Check login and fetch entities on component mount
   useEffect(() => {
-    // Check if user is logged in
     const userData = sessionStorage.getItem("user");
     if (!userData) {
       navigate("/login");
       return;
     }
 
+    // Check if user has Global role
+    const user = JSON.parse(userData);
+    if (user.role !== "Global") {
+      // If not Global, redirect to home page
+      navigate("/");
+      return;
+    }
+    
     fetchEntities();
-  }, [navigate]);
+  }, [navigate, fetchEntities]);
 
+  // Fetch regulations and country codes when add form is shown
   useEffect(() => {
     if (showAddForm) {
       fetchRegulations();
       fetchCountryCodes();
     }
   }, [showAddForm]);
-
-  const fetchEntities = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get("http://localhost:5000/entities");
-      const entitiesData = response.data.entities || [];
-      setEntities(entitiesData);
-      setFilteredEntities(entitiesData);
-      setLoading(false);
-    } catch (err) {
-      console.error("Error fetching entities:", err);
-      setError("Failed to fetch entities. Please try again later.");
-      setLoading(false);
-    }
-  };
 
   // Apply search and filters
   useEffect(() => {
@@ -118,19 +131,18 @@ const Entities = () => {
   const fetchRegulations = async () => {
     try {
       setLoadingRegulations(true);
-      const response = await axios.get("http://localhost:5000/regulations");
+      const response = await axios.get(`${API_BASE_URL}/regulations`);
       setRegulations(response.data.regulations || []);
-      setLoadingRegulations(false);
     } catch (err) {
-      console.error("Error fetching regulations:", err);
       setErrorMessage("Failed to fetch regulations. Please try again later.");
+    } finally {
       setLoadingRegulations(false);
     }
   };
 
   const fetchCountryCodes = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/country_codes");
+      const response = await axios.get(`${API_BASE_URL}/country_codes`);
       setCountries(response.data.countries || []);
       
       // If India is in the list, set it as default
@@ -140,7 +152,6 @@ const Entities = () => {
         setAlternateContactCountryCode(india.country_code);
       }
     } catch (err) {
-      console.error("Error fetching country codes:", err);
       setErrorMessage("Failed to fetch country codes. Please try again later.");
     }
   };
@@ -148,9 +159,9 @@ const Entities = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (showEditForm) {
-      setCurrentEntity({ ...currentEntity, [name]: value });
+      setCurrentEntity(prev => ({ ...prev, [name]: value }));
     } else {
-      setNewEntity({ ...newEntity, [name]: value });
+      setNewEntity(prev => ({ ...prev, [name]: value }));
     }
   };
 
@@ -160,10 +171,10 @@ const Entities = () => {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters({
-      ...filters,
+    setFilters(prev => ({
+      ...prev,
       [name]: value
-    });
+    }));
   };
 
   const resetFilters = () => {
@@ -178,24 +189,26 @@ const Entities = () => {
     const regulationId = e.target.value;
     const isChecked = e.target.checked;
     
-    if (isChecked) {
-      // Add regulation to selected list
-      setNewEntity({
-        ...newEntity,
-        selected_regulations: [...newEntity.selected_regulations, regulationId]
-      });
-    } else {
-      // Remove regulation from selected list
-      setNewEntity({
-        ...newEntity,
-        selected_regulations: newEntity.selected_regulations.filter(id => id !== regulationId)
-      });
-    }
+    setNewEntity(prev => {
+      if (isChecked) {
+        // Add regulation to selected list
+        return {
+          ...prev,
+          selected_regulations: [...prev.selected_regulations, regulationId]
+        };
+      } else {
+        // Remove regulation from selected list
+        return {
+          ...prev,
+          selected_regulations: prev.selected_regulations.filter(id => id !== regulationId)
+        };
+      }
+    });
   };
 
   const handleCountryChange = (e) => {
     const selectedCountry = e.target.value;
-    setNewEntity({ ...newEntity, country: selectedCountry });
+    setNewEntity(prev => ({ ...prev, country: selectedCountry }));
     
     // Update country code if country changes
     const countryData = countries.find(country => country.country === selectedCountry);
@@ -218,25 +231,11 @@ const Entities = () => {
         alternate_contact: `${alternateContactCountryCode} ${newEntity.alternate_contact}`
       };
       
-      const response = await axios.post("http://localhost:5000/add_entity", formData);
+      const response = await axios.post(`${API_BASE_URL}/add_entity`, formData);
       setSuccessMessage(response.data.message);
       
       // Reset form and refresh entities list
-      setNewEntity({
-        entity_name: "",
-        location: "",
-        contact_phno: "",
-        alternate_contact: "",
-        description: "",
-        country: "India",
-        contact_name: "",
-        alternate_contact_name: "",
-        state: "",
-        pincode: "",
-        admin_email: "",
-        admin_password: "",
-        selected_regulations: []
-      });
+      setNewEntity({...initialEntityState});
       
       // Reset country codes to default
       setContactCountryCode("+91");
@@ -250,7 +249,6 @@ const Entities = () => {
       }, 2000);
     } catch (error) {
       setErrorMessage("Error adding entity. Please try again.");
-      console.error("Error adding entity:", error);
     }
   };
 
@@ -266,7 +264,10 @@ const Entities = () => {
     setSuccessMessage("");
 
     try {
-      const response = await axios.put(`http://localhost:5000/update_entity/${currentEntity.entity_id}`, currentEntity);
+      const response = await axios.put(
+        `${API_BASE_URL}/update_entity/${currentEntity.entity_id}`, 
+        currentEntity
+      );
       setSuccessMessage(response.data.message);
       
       // Close the form after a short delay
@@ -278,18 +279,16 @@ const Entities = () => {
       }, 2000);
     } catch (error) {
       setErrorMessage("Error updating entity. Please try again.");
-      console.error("Error updating entity:", error);
     }
   };
 
   const handleDeleteEntity = async (entityId) => {
     if (window.confirm("Are you sure you want to delete this entity?")) {
       try {
-        await axios.delete(`http://localhost:5000/delete_entity/${entityId}`);
+        await axios.delete(`${API_BASE_URL}/delete_entity/${entityId}`);
         // Refresh the entities list
         fetchEntities();
       } catch (err) {
-        console.error("Error deleting entity:", err);
         setError("Failed to delete entity. Please try again later.");
       }
     }
@@ -301,21 +300,7 @@ const Entities = () => {
     setErrorMessage("");
     setSuccessMessage("");
     // Reset the form when toggling
-    setNewEntity({
-      entity_name: "",
-      location: "",
-      contact_phno: "",
-      alternate_contact: "",
-      description: "",
-      country: "India",
-      contact_name: "",
-      alternate_contact_name: "",
-      state: "",
-      pincode: "",
-      admin_email: "",
-      admin_password: "",
-      selected_regulations: []
-    });
+    setNewEntity({...initialEntityState});
     // Reset country codes to default
     setContactCountryCode("+91");
     setAlternateContactCountryCode("+91");
@@ -329,35 +314,26 @@ const Entities = () => {
   };
 
   // Get unique countries and states for filters
-  const getUniqueCountries = () => {
+  const getUniqueCountries = useMemo(() => {
     const countriesSet = new Set();
     entities.forEach(entity => {
       if (entity.country) countriesSet.add(entity.country);
     });
     return Array.from(countriesSet).sort();
-  };
+  }, [entities]);
 
-  const getUniqueStates = () => {
+  const getUniqueStates = useMemo(() => {
     const statesSet = new Set();
     entities.forEach(entity => {
       if (entity.state) statesSet.add(entity.state);
     });
     return Array.from(statesSet).sort();
-  };
+  }, [entities]);
 
   return (
     <div className="entities-container">
       <Navbar />
       <div className="entities-content">
-        {/* <h1>Entities Management</h1>
-        <p>View and manage organization entities</p> */}
-
-        {/* <div className="entities-actions">
-          <button className="btn-add-entity" onClick={toggleAddForm}>
-            {showAddForm ? "Cancel" : "Add New Entity"}
-          </button>
-        </div> */}
-
         {successMessage && (
           <div className="success-message">{successMessage}</div>
         )}
@@ -577,9 +553,14 @@ const Entities = () => {
               </div>
 
               <div className="form-actions">
-                <button type="submit" className="btn-submit">
-                  Save Entity
-                </button>
+                <PrivilegedButton 
+                  type="submit" 
+                  className="btn-submit"
+                  requiredPrivilege="entity_add"
+                  title="add this entity"
+                >
+                  Add Entity
+                </PrivilegedButton>
                 <button type="button" className="btn-cancel" onClick={toggleAddForm}>
                   Cancel
                 </button>
@@ -758,9 +739,14 @@ const Entities = () => {
               </div>
 
               <div className="form-actions">
-                <button type="submit" className="btn-submit">
+                <PrivilegedButton 
+                  type="submit" 
+                  className="btn-submit"
+                  requiredPrivilege="entity_update"
+                  title="update this entity"
+                >
                   Update Entity
-                </button>
+                </PrivilegedButton>
                 <button type="button" className="btn-cancel" onClick={cancelEdit}>
                   Cancel
                 </button>
@@ -793,9 +779,14 @@ const Entities = () => {
                 </button>
               </div>
               
-              <button className="btn-add-entity" onClick={toggleAddForm}>
-                Add New Entity
-              </button>
+              <PrivilegedButton 
+                className="btn-add" 
+                onClick={toggleAddForm}
+                requiredPrivilege="entity_add"
+                title="add a new entity"
+              >
+                Add Entity
+              </PrivilegedButton>
             </div>
 
             {showFilters && (
@@ -809,7 +800,7 @@ const Entities = () => {
                     onChange={handleFilterChange}
                   >
                     <option value="">All Countries</option>
-                    {getUniqueCountries().map(country => (
+                    {getUniqueCountries.map(country => (
                       <option key={country} value={country}>
                         {country}
                       </option>
@@ -826,7 +817,7 @@ const Entities = () => {
                     onChange={handleFilterChange}
                   >
                     <option value="">All States</option>
-                    {getUniqueStates().map(state => (
+                    {getUniqueStates.map(state => (
                       <option key={state} value={state}>
                         {state}
                       </option>
@@ -854,7 +845,7 @@ const Entities = () => {
               </div>
             ) : (
               <div className="entity-cards-container">
-                {entities.map((entity, index) => (
+                {filteredEntities.map((entity, index) => (
                   <div 
                     key={entity.entity_id} 
                     className="entity-card" 
@@ -870,11 +861,6 @@ const Entities = () => {
                           <FaMapMarkerAlt />
                           {entity.location}
                         </div>
-                        {/* {entity.state && (
-                          <div className="entity-badge">
-                            {entity.state.substring(0, 3).toLowerCase()}
-                          </div>
-                        )} */}
                       </div>
                     </div>
                     
@@ -900,20 +886,22 @@ const Entities = () => {
                     </div>
                     
                     <div className="entity-card-actions">
-                      <button
-                        className="btn-edit"
+                      <PrivilegedButton 
+                        className="btn-edit" 
                         onClick={() => handleEditEntity(entity)}
-                        title="Edit Entity"
+                        requiredPrivilege="entity_update"
+                        title="edit this entity"
                       >
-                        <FaPencilAlt />
-                      </button>
-                      <button
-                        className="btn-delete"
+                        Edit
+                      </PrivilegedButton>
+                      <PrivilegedButton 
+                        className="btn-delete" 
                         onClick={() => handleDeleteEntity(entity.entity_id)}
-                        title="Delete Entity"
+                        requiredPrivilege="entity_delete"
+                        title="delete this entity"
                       >
-                        <FaTrash />
-                      </button>
+                        <FaTrashAlt />
+                      </PrivilegedButton>
                     </div>
                   </div>
                 ))}

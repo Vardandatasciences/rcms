@@ -470,7 +470,6 @@ def adjust_due_date_for_holidays(due_date):
     
     return due_date
 
-<<<<<<< HEAD
 @activities_bp.route('/entity_tasks/<string:entity_id>', methods=['GET'])
 def get_entity_tasks(entity_id):
     try:
@@ -574,7 +573,6 @@ def get_entity_regulation_tasks(entity_id):
         print(traceback.format_exc())
         return jsonify({'error': str(e), 'tasks': []}), 500
 
-=======
 
 
 @activities_bp.route('/activities/entity/<string:entity_id>', methods=['GET'])
@@ -607,4 +605,3 @@ def get_entity_activities(entity_id):
     except Exception as e:
         print(f"Error fetching activities: {str(e)}")  # Debug log
         return jsonify({"error": str(e)}), 500
->>>>>>> main

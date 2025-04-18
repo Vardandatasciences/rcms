@@ -1,10 +1,14 @@
 import os
 import requests
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from msal import ConfidentialClientApplication
 from datetime import datetime
 import logging
 from models import db
 from models.models import MessageQueue, Users
+import traceback
 
 # Microsoft App configurations
 CLIENT_ID = '1a9a4d27-4a49-400d-9bfb-a6cfa08f1b15'
@@ -17,6 +21,13 @@ SCOPES = ['https://graph.microsoft.com/.default']
 # Microsoft Graph API Base URL
 GRAPH_API_ENDPOINT = 'https://graph.microsoft.com/v1.0'
 
+# SMTP Configuration - Office 365 settings
+SMTP_SERVER = "smtp.office365.com"  # Office 365 SMTP server
+SMTP_PORT = 587
+SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "preethi.b@vardaanglobal.com")  # Use environment variable if available
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")  # Should be loaded from environment variables
+DEFAULT_SENDER = "preethi.b@vardaanglobal.com"
+
 # MSAL Client Application
 app_msal = ConfidentialClientApplication(
     CLIENT_ID,
@@ -26,17 +37,71 @@ app_msal = ConfidentialClientApplication(
 
 # Helper function to get access token
 def get_access_token():
+    """
+    Get access token for Microsoft Graph API
+    
+    Returns:
+        str: Access token if successful, None otherwise
+    """
     try:
+        logging.info("Attempting to acquire access token from Microsoft Graph API")
         result = app_msal.acquire_token_for_client(scopes=SCOPES)
+        
         if 'access_token' in result:
+            logging.info("Successfully acquired access token for Microsoft Graph API")
             return result['access_token']
         else:
-            logging.error(f"Token retrieval failed: {result.get('error')}, {result.get('error_description')}")
-            logging.error(f"Correlation ID: {result.get('correlation_id')}")
-            logging.error(f"Error Codes: {result.get('error_codes')}")
+            error = result.get('error', 'unknown_error')
+            error_desc = result.get('error_description', 'No description available')
+            corr_id = result.get('correlation_id', 'No correlation ID')
+            error_codes = result.get('error_codes', [])
+            
+            logging.error(f"Token retrieval failed: {error}, {error_desc}")
+            logging.error(f"Correlation ID: {corr_id}")
+            logging.error(f"Error Codes: {error_codes}")
+            
+            # Log more details about each error code
+            if error_codes:
+                for code in error_codes:
+                    logging.error(f"Error code {code} details: {get_error_code_details(code)}")
+            
+            return None
     except Exception as e:
         logging.error(f"Exception during token retrieval: {str(e)}")
+        logging.error(f"Exception type: {type(e).__name__}")
+        logging.error(f"Traceback: {traceback.format_exc()}")
     return None
+
+def get_error_code_details(error_code):
+    """
+    Get details about Microsoft Graph API error codes
+    
+    Args:
+        error_code: The error code
+        
+    Returns:
+        str: Description of the error code
+    """
+    error_details = {
+        # Authentication errors
+        "7000215": "Invalid client secret provided",
+        "7000222": "The provided client secret keys are expired",
+        "90002": "Tenant is not allowed to access this application",
+        "50076": "Due to a configuration change made by your administrator, or because you moved to a new location, you must use multi-factor authentication to access",
+        "700016": "The application wasn't found in the directory",
+        "700082": "The refresh token has expired due to inactivity",
+        
+        # Authorization errors
+        "65001": "The user or administrator has not consented to use the application",
+        "500011": "The resource principal named was not found in the tenant",
+        "500021": "The user account doesn't exist in the directory",
+        
+        # Rate limiting
+        "700020": "Rate limit exceeded",
+        "700016": "Application not found in directory"
+    }
+    
+    return error_details.get(str(error_code), "Unknown error code")
 
 def create_calendar_event(subject, start_datetime, end_datetime, attendees, description):
     access_token = get_access_token()
@@ -80,40 +145,188 @@ def create_calendar_event(subject, start_datetime, end_datetime, attendees, desc
     else:
         logging.error(f"Error creating event: {response.status_code}, {response.text}")
 
-def send_email(subject, body, recipient_email, sender_email):
-    access_token = get_access_token()
-    if not access_token:
-        logging.error("Could not retrieve access token.")
-        return
+def send_smtp_email(subject, html_body, recipient_email, sender_email=None):
+    """
+    Send an email using SMTP
+    
+    Args:
+        subject: Email subject
+        html_body: HTML email body
+        recipient_email: Recipient's email address
+        sender_email: Sender's email address (optional)
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    if not sender_email:
+        sender_email = DEFAULT_SENDER
+        
+    try:
+        logging.info(f"Attempting to send email via SMTP to {recipient_email}")
+        
+        # Create message
+        msg = MIMEMultipart()
+        msg['From'] = sender_email
+        msg['To'] = recipient_email
+        msg['Subject'] = subject
+        
+        # Attach HTML body
+        msg.attach(MIMEText(html_body, 'html'))
+        
+        # Try to connect to the server using environment variables or defaults
+        smtp_server = os.environ.get("SMTP_SERVER", SMTP_SERVER)
+        smtp_port = int(os.environ.get("SMTP_PORT", SMTP_PORT))
+        smtp_username = os.environ.get("SMTP_USERNAME", SMTP_USERNAME)
+        smtp_password = os.environ.get("SMTP_PASSWORD", SMTP_PASSWORD)
+        
+        logging.info(f"Connecting to SMTP server: {smtp_server}:{smtp_port}")
+        
+        # Connect to server and send
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+        
+        logging.info(f"Email sent successfully to {recipient_email} via SMTP!")
+        return True
+        
+    except Exception as e:
+        logging.error(f"SMTP email sending failed: {str(e)}")
+        return False
 
-    url = f"{GRAPH_API_ENDPOINT}/users/{sender_email}/sendMail"
-    headers = {
-        'Authorization': f'Bearer {access_token}',
-        'Content-Type': 'application/json'
-    }
+def log_email_to_file(subject, body, recipient_email, sender_email):
+    """
+    Save email content to a file for debugging when actual sending fails
+    
+    Args:
+        subject: Email subject
+        body: HTML email body
+        recipient_email: Recipient's email address
+        sender_email: Sender's email address
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        # Create logs directory if it doesn't exist
+        log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs')
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        
+        # Create a unique filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"email_{timestamp}_{recipient_email.replace('@', '_at_').replace('.', '_')}.html"
+        file_path = os.path.join(log_dir, filename)
+        
+        # Create a log entry with all the email details
+        log_content = f"""
+        <!--
+        TO: {recipient_email}
+        FROM: {sender_email}
+        SUBJECT: {subject}
+        DATE: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+        -->
+        
+        {body}
+        """
+        
+        # Write to file
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(log_content)
+            
+        logging.info(f"Email content saved to file: {file_path}")
+        return True
+    
+    except Exception as e:
+        logging.error(f"Failed to save email to file: {str(e)}")
+        return False
 
-    email_message = {
-        "message": {
-            "subject": subject,
-            "body": {
-                "contentType": "HTML",
-                "content": body
-            },
-            "toRecipients": [
-                {
-                    "emailAddress": {
-                        "address": recipient_email
-                    }
-                }
-            ]
+def send_email(subject, body, recipient_email, sender_email=None):
+    """
+    Send an email using Microsoft Graph API with SMTP fallback
+    
+    Args:
+        subject: Email subject
+        body: HTML email body
+        recipient_email: Recipient's email address
+        sender_email: Sender's email address (optional)
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    if not sender_email:
+        sender_email = DEFAULT_SENDER
+        
+    # Detailed logging
+    logging.info(f"Attempting to send email to {recipient_email}")
+    logging.info(f"Email subject: {subject}")
+    
+    # First try direct SMTP as the most reliable method
+    smtp_success = send_smtp_email(subject, body, recipient_email, sender_email)
+    if smtp_success:
+        return True
+        
+    # If SMTP fails, try Microsoft Graph API
+    try:
+        # Get access token
+        access_token = get_access_token()
+        if not access_token:
+            logging.error("Could not retrieve access token for Microsoft Graph API.")
+            raise Exception("Failed to get access token")
+
+        url = f"{GRAPH_API_ENDPOINT}/users/{sender_email}/sendMail"
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
         }
-    }
 
-    response = requests.post(url, json=email_message, headers=headers)
-    if response.status_code == 202:
-        logging.info(f"Email sent successfully to {recipient_email}!")
-    else:
-        logging.error(f"Error sending email to {recipient_email}: {response.status_code}, {response.text}")
+        email_message = {
+            "message": {
+                "subject": subject,
+                "body": {
+                    "contentType": "HTML",
+                    "content": body
+                },
+                "toRecipients": [
+                    {
+                        "emailAddress": {
+                            "address": recipient_email
+                        }
+                    }
+                ]
+                },
+                "saveToSentItems": "true"
+        }
+
+        logging.info(f"Sending email via Microsoft Graph API to {recipient_email}")
+        response = requests.post(url, json=email_message, headers=headers)
+            
+        if response.status_code == 202:
+            logging.info(f"Email sent successfully to {recipient_email} via Microsoft Graph API!")
+            return True
+        else:
+            logging.error(f"Error sending email via Microsoft Graph API: {response.status_code}")
+            logging.error(f"Response: {response.text}")
+            raise Exception(f"Microsoft Graph API returned status code {response.status_code}")
+            
+    except Exception as e:
+        logging.error(f"Microsoft Graph API email sending failed: {str(e)}")
+        
+        # If all methods fail, save email to file as a last resort for testing
+        file_save_success = log_email_to_file(subject, body, recipient_email, sender_email)
+        if file_save_success:
+            logging.warning(f"Email could not be sent, but content was saved to a log file for review")
+            # In development environments, we could consider this a "success" for testing
+            # but in production, should be clearly marked as a failure
+            # return True
+        
+        # All methods failed
+        logging.error("All email sending methods failed. Email was not sent.")
+        return False
+    
+    return False
 
 def get_email_template(title, content, footer_text):
     """Generate a professional HTML email template."""
@@ -201,6 +414,43 @@ def get_email_template(title, content, footer_text):
                 padding: 10px;
                 border-radius: 4px;
                 margin: 10px 0;
+            }}
+            .privilege-section {{
+                border-left: 4px solid #3498db;
+            }}
+            .privilege-category {{
+                margin-bottom: 15px;
+            }}
+            .privilege-category h4 {{
+                margin: 0 0 8px 0;
+                color: #2c3e50;
+                font-size: 16px;
+                border-bottom: 1px solid #e0e0e0;
+                padding-bottom: 5px;
+            }}
+            .privilege-category ul {{
+                margin: 0;
+                padding-left: 20px;
+            }}
+            .privilege-category li {{
+                margin-bottom: 5px;
+            }}
+            .privilege-note {{
+                font-style: italic;
+                font-size: 12px;
+                color: #666;
+                margin-top: 15px;
+                padding-top: 10px;
+                border-top: 1px dashed #e0e0e0;
+            }}
+            .notice {{
+                padding: 10px;
+                background-color: #e8f4f8;
+                border-radius: 4px;
+            }}
+            .notice p {{
+                margin: 0;
+                font-style: italic;
             }}
         </style>
     </head>

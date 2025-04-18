@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 import "./Categories.css";
+import { PrivilegedButton } from "./Privileges";
 import { FaFolder, FaPlus, FaEdit, FaTrashAlt, FaSave, 
          FaTimes, FaSpinner, FaExclamationTriangle, 
          FaInfoCircle, FaLayerGroup, FaComment } from "react-icons/fa";
@@ -96,12 +97,14 @@ const Categories = () => {
             <FaLayerGroup className="filter-tab-icon" /> All Categories
           </div>
 
-          <button 
+          <PrivilegedButton 
             className="btn-add-category" 
             onClick={() => setIsAdding(!isAdding)}
+            requiredPrivilege="category_add"
+            title="add a new category"
           >
             {isAdding ? <><FaTimes /> Cancel</> : <><FaPlus /> Add New Category</>}
-          </button>
+          </PrivilegedButton>
         </div>
 
         {isAdding && (
@@ -131,9 +134,14 @@ const Categories = () => {
                 />
               </div>
               <div className="form-actions">
-                <button type="submit" className="btn-submit">
+                <PrivilegedButton 
+                  type="submit" 
+                  className="btn-submit"
+                  requiredPrivilege="category_add"
+                  title="save this category"
+                >
                   <FaSave /> Save Category
-                </button>
+                </PrivilegedButton>
                 <button type="button" className="btn-cancel" onClick={() => setIsAdding(false)}>
                   <FaTimes /> Cancel
                 </button>
@@ -196,13 +204,14 @@ const Categories = () => {
                     >
                       <FaEdit />
                     </button> */}
-                    <button
+                    <PrivilegedButton
                       className="category-btn btn-delete"
                       onClick={() => handleDeleteCategory(category.category_id)}
-                      title="Delete Category"
+                      requiredPrivilege="category_delete"
+                      title="delete this category"
                     >
                       <FaTrashAlt />
-                    </button>
+                    </PrivilegedButton>
                   </div>
                 </div>
               ))
